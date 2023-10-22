@@ -82,9 +82,7 @@ async def analyze_conversation_and_decide(messages):
     print("Max retries reached. Defaulting to 'No'.")
     return False
 
-
-
-def summarize_text(text, num_words=5):
+def summarize_text(text, num_words=5, max_sentences=2):
     # Tokenize the text into words, removing punctuation and converting to lowercase
     words = [word.lower() for word in re.findall(r'\w+', text)]
     
@@ -92,14 +90,22 @@ def summarize_text(text, num_words=5):
     word_freq = Counter(words)
     
     # Select the most common words
-    common_words = [word[0] for word in word_freq.most_common(num_words)]
+    common_words = set([word[0] for word in word_freq.most_common(num_words)])
     
-    # Construct the summary using sentences that contain the most common words
+    # Score sentences based on the number of common words they contain
     sentences = text.split('.')
-    summary = '. '.join([sentence.strip() for sentence in sentences if any(word in sentence.lower() for word in common_words)])
+    sentence_scores = [(sentence, sum(1 for word in sentence.lower().split() if word in common_words)) for sentence in sentences]
+    
+    # Sort sentences by their scores in descending order
+    sorted_sentences = sorted(sentence_scores, key=lambda x: x[1], reverse=True)
+    
+    # Construct the summary using top scoring sentences
+    summary = '. '.join([sentence[0].strip() for sentence in sorted_sentences[:max_sentences]])
     
     return summary
 
+text = "The beautiful garden was filled with colorful flowers. Birds chirped happily, and the sun shone brightly. It was a perfect day for a picnic."
+print(summarize_text(text))
 
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
@@ -110,15 +116,24 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             recent_convo = group_conversation[-15:]
             general_conversation = group_conversation[-500:]
 
-            # Incorporate the past AI summarized responses
-            past_ai_summaries = ' '.join(ai_responses[-3:])
+            should_reply = await analyze_conversation_and_decide(recent_convo)  
+            if not should_reply:
+                print("Not replying.")
+                return
 
-            command = f"Considering the past AI intentions: '{past_ai_summaries}', and using the context from the \n{general_conversation}, provide a concise and summarized response to \n{direct_convo}, then gauge whether to respond to the most recent \n{recent_convo}."
+            # In the echo function:
+
+            # Prioritize the most recent AI response
+            past_ai_summary = ai_responses[-1] if ai_responses else ""
+
+            command = f"Recalling the most recent intent: '{past_ai_summary}', and with the essence of the \n{general_conversation}, kindly join the dialogue considering: \n{direct_convo} | as the latest input and \n{recent_convo} as additional context."
 
             response = await call_openai_api(command=command)
 
             # Store the summarized intention of the AI response
             summarized_intent = summarize_text(response)
+            print(f"Summarized intent: {summarized_intent}")
+
             ai_responses.append(summarized_intent)
 
             await context.bot.send_message(chat_id=update.message.chat.id, text=response)
