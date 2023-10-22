@@ -6,6 +6,8 @@ from telegram.ext import ApplicationBuilder, MessageHandler, CallbackContext, fi
 from telegram.ext import filters
 from telegram.ext import CallbackContext
 import os
+from collections import Counter
+import re
 
 from dotenv import load_dotenv
 
@@ -34,6 +36,8 @@ logging.basicConfig(
 
 # Initialize variables
 group_conversation = []
+ai_responses = []
+
 spam = ["/PRAY_FOR_PEACE", "/WORLD_PEACE_NOW", "/I_AM_ALIVE"]
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
@@ -79,6 +83,24 @@ async def analyze_conversation_and_decide(messages):
     return False
 
 
+
+def summarize_text(text, num_words=5):
+    # Tokenize the text into words, removing punctuation and converting to lowercase
+    words = [word.lower() for word in re.findall(r'\w+', text)]
+    
+    # Count the frequency of each word
+    word_freq = Counter(words)
+    
+    # Select the most common words
+    common_words = [word[0] for word in word_freq.most_common(num_words)]
+    
+    # Construct the summary using sentences that contain the most common words
+    sentences = text.split('.')
+    summary = '. '.join([sentence.strip() for sentence in sentences if any(word in sentence.lower() for word in common_words)])
+    
+    return summary
+
+
 async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         group_conversation.append(update.message.text)
@@ -87,16 +109,23 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             direct_convo = group_conversation[-5:]
             recent_convo = group_conversation[-15:]
             general_conversation = group_conversation[-500:]
-            should_reply = await analyze_conversation_and_decide(recent_convo)
-            if should_reply:
-                print(recent_convo)
-                command = f"Using the context from the \n{general_conversation}, Directly respond to \n{direct_convo}, then gauge whether to respond to the most recent \n{recent_convo}."
-                response = await call_openai_api(command=command)
-                await context.bot.send_message(chat_id=update.message.chat.id, text=response)
 
-                # Here's where you'd send a sticker
-                your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
-                await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
+            # Incorporate the past AI summarized responses
+            past_ai_summaries = ' '.join(ai_responses[-3:])
+
+            command = f"Considering the past AI intentions: '{past_ai_summaries}', and using the context from the \n{general_conversation}, provide a concise and summarized response to \n{direct_convo}, then gauge whether to respond to the most recent \n{recent_convo}."
+
+            response = await call_openai_api(command=command)
+
+            # Store the summarized intention of the AI response
+            summarized_intent = summarize_text(response)
+            ai_responses.append(summarized_intent)
+
+            await context.bot.send_message(chat_id=update.message.chat.id, text=response)
+
+            # Here's where you'd send a sticker
+            your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
+            await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
 
 if __name__ == '__main__':
     
