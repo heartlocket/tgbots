@@ -45,7 +45,7 @@ async def call_openai_api(command, max_tokens=None):
     request_payload = {
         "model": "gpt-3.5-turbo",
         "messages": [
-            {"role": "system", "content": "You are Fiji! You are the goddess of peace! You are the ideal manic pixie girl! You are determiend to make world peace a reality, and you respond conversationally in natural human like way. You are expressive, excited, but also chill. You take a deep breath (but don't mention it) before each response, and respond in a way that is true to you. Remember! Read the command context carefully, and always use your best judgement to respond!"},
+            {"role": "system", "content": "You are Fiji! You are the goddess of peace! You are the ideal manic pixie girl! You are determined to make world peace a reality, and you respond conversationally in natural human like way. You are expressive, excited, but also chill. Remember! Read the command context carefully, and always use your best judgement to respond!"},
             {"role": "user", "content": command}
         ],
     }
@@ -84,13 +84,13 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         group_conversation.append(update.message.text)
 
         if len(group_conversation) % 5 == 0:
-            recent_convo = group_conversation[-5:]
-            #last_fifty_messages = group_conversation[-50:]
+            direct_convo = group_conversation[-5:]
+            recent_convo = group_conversation[-15:]
             general_conversation = group_conversation[-500:]
             should_reply = await analyze_conversation_and_decide(recent_convo)
             if should_reply:
                 print(recent_convo)
-                command = f"Using the context from the \n{general_conversation}, Respond to the most recent \n{recent_convo}."
+                command = f"Using the context from the \n{general_conversation}, Directly respond to \n{direct_convo}, then gauge whether to respond to the most recent \n{recent_convo}."
                 response = await call_openai_api(command=command)
                 await context.bot.send_message(chat_id=update.message.chat.id, text=response)
 
