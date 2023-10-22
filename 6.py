@@ -100,7 +100,11 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print(recent_convo)
                 command = f"Using the context from the general conversation, respond to the most recent conversation. DO NOT SUMMARIZE or REPEAT THE CONVERSATION! Just interact with the users, respond, and be helpful. Only make one general response to the group referencing names, not a series of remarks. Respond naturally with the same syntax and style of writing within the larger conversation as someone participating. Make sure to reference the user name if useful.\n\nThe recent conversation is {recent_convo}.\n\nThe larger context is {general_conversation}.\n\nREMEMBER ONLY RESPOND TO THE RECENT CONVERSATION, THE GENERAL CONVERSATION IS JUST FOR CONTEXT. DO NOT RESPOND DIRECTLY TO PAST QUESTIONS OR OLD ISSUES FROM THE GENERAL CONVERSATION. DO NOT GREET PEOPLE UNLESS THE CONVERSATION IS TRULY NEW."
                 print(command)
-                response = await call_openai_api(command=command)
+                try:
+                    response = await call_openai_api(command=command)
+                except:
+                    print("exception")
+                    return
                 await context.bot.send_message(chat_id=update.message.chat.id, text=response)
 
                 # Here's where you'd send a sticker
