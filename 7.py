@@ -61,6 +61,7 @@ logging.basicConfig(
 
 # Initialize variables
 group_conversation = []
+stack = []
 spam = ["/PRAY_FOR_PEACE", "/WORLD_PEACE_NOW", "/I_AM_ALIVE"]
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
@@ -149,20 +150,29 @@ async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         print(update.message)
         print(update.message.from_user.first_name)
+
+        current_datetime = update.message.date
+
+        tempdate = current_datetime.strftime("%H:%M:%S")
+        custom_format = "Now it is %B %d, %Y, and it is %I:%M%p UTC"
+        formatted_datetime = current_datetime.strftime(custom_format)
+
+        stack.append(update.message.from_user.first_name + " " +
+                     tempdate + "UTC: " + update.message.text)
+
         group_conversation.append(
             update.message.from_user.first_name + ": " + update.message.text)
 
-        if len(group_conversation) % 5 == 0:
-            recent_convo = group_conversation[-5:]
-            # last_fifty_messages = group_conversation[-50:]
+        if len(stack) > 5 or update.message.text.startswith(("FIJI", "fiji", "Fiji")):
             general_conversation = select_strings(group_conversation[-500:])
-            should_reply = await analyze_conversation_and_decide(recent_convo)
+            should_reply = await analyze_conversation_and_decide(stack)
             if should_reply:
-                print(recent_convo)
-                command = f"Using the context from the general conversation, respond to the most recent conversation. DO NOT SUMMARIZE or REPEAT THE CONVERSATION! Just interact with the users, respond, and be helpful. Only make one general response -- not too long! -- to the group referencing names, not a series of remarks. Respond naturally with the same syntax and style of writing within the larger conversation as someone participating. Make sure to reference the user name if useful.\n\nThe recent conversation is {recent_convo}.\n\nThe larger context is {general_conversation}.\n\nREMEMBER ONLY RESPOND TO THE RECENT CONVERSATION, THE GENERAL CONVERSATION IS JUST FOR CONTEXT. DO NOT RESPOND DIRECTLY TO PAST QUESTIONS OR OLD ISSUES FROM THE GENERAL CONVERSATION. DO NOT GREET PEOPLE UNLESS THE CONVERSATION IS TRULY NEW."
+                print(stack)
+                command = f"{formatted_datetime}. Using the context from the general conversation, respond to the most recent conversation. DO NOT SUMMARIZE or REPEAT THE CONVERSATION! DO NOT INCLUDE THE DATETIME UNLESS IT IS NEEDED! Just interact with the users, respond, and be helpful. Only make one general response -- not too long! -- to the group referencing names, not a series of remarks. Respond naturally with the same syntax and style of writing within the larger conversation as someone participating. Make sure to reference the user name if useful.\n\nThe recent conversation is {stack}.\n\nThe larger context is {general_conversation}.\n\nREMEMBER ONLY RESPOND TO THE RECENT CONVERSATION, THE GENERAL CONVERSATION IS JUST FOR CONTEXT. DO NOT RESPOND DIRECTLY TO PAST QUESTIONS OR OLD ISSUES FROM THE GENERAL CONVERSATION. DO NOT GREET PEOPLE UNLESS THE CONVERSATION IS TRULY NEW."
                 print(command)
                 try:
                     response = await call_openai_api(command=command)
+                    stack.clear()
                 except:
                     print("exception")
                     return
