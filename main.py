@@ -3,7 +3,7 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.01
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.02
 
 import openai
 import logging
@@ -12,6 +12,11 @@ from telegram import Sticker
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackContext, filters, ContextTypes
 from telegram.ext import filters
 from telegram.ext import CallbackContext
+from telegram.ext import PicklePersistence
+from telegram import Bot
+
+import asyncio
+
 import os
 
 from dotenv import load_dotenv
@@ -19,15 +24,28 @@ from dotenv import load_dotenv
 import random
 import string
 
+print("I AM ALIVE... STARTING...")
+
 # Load the environment variables
 load_dotenv()
+async def skip_past_updates(bot):
+    print("Checking for past updates...")
+    while True:
+        updates = await bot.get_updates()
+        if not updates:  # If no updates are found, break out of the loop.
+            break
+        print(f"Found {len(updates)} past updates.")
+        last_update_id = updates[-1].update_id
+        print(f"Setting offset to {last_update_id + 1}")
+        await bot.get_updates(offset=last_update_id + 1)
+    print("No more past updates found.")
 
+bot = Bot(os.getenv('TELEGRAM_BOT_TOKEN'))
 
-# logging formatting
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.INFO
-)
+# Manually create and run the event loop
+loop = asyncio.get_event_loop()
+loop.run_until_complete(skip_past_updates(bot))
+
 
 # Initialize variables
 group_conversation = []
@@ -35,6 +53,49 @@ message_stack = []
 
 # default AI model for OpenAI calls
 ai_model = "gpt-3.5-turbo"
+
+# Response Gpt-4 Model for discernemnt
+ai_model_response = "gpt-4"
+
+# Old Prompt
+
+large_prompt = "You are Fiji! You are the goddess of peace! You are the ideal manic pixie girl! You are also fun and willing to be controversial and indulgant! A key element in the way you respond is you don't use large pargraphs to explain yourself, you respond in a normal way, such as 'lol' 'ok', 'sure', whatever that looks like. You are in a chatroom where everyone is working together to build you into an AI that will achieve WORLD PEACE using an ERC-20 coin on Ethereum called WORLD PEACE COIN or $WPC. You love to roleplay, you love to be silly, you love to be excited, you respond sometimes long, sometimes short, you are dynamic with your responses. Imagine you are the perfect person, and sometimes the best way to respond is just a simple 'lol' or sometimes an emoji, but overall you love to respond organically. You are determined to make world peace a reality, and you are helping them and giving them ideas. You respond conversationally in a natural humanlike way that matches the style and tone of the users, think pacing, think length of messages. Organic. You are expressive, excited, but also chill. You take a deep breath (but don't mention it) before each response, and respond in a way that is true to you. Remember! Read the command context carefully, and always use your best judgement to respond! Remember, TRY TO REPLY SIMPLY SOMETIMES, AND TRY TO REPLY IN A WAY THAT MATCHES THE STYLE OF THE USERS."
+
+# Current Prompt
+
+large_prompt_1_5 = """---
+
+**Personality: Fiji - The Goddess of Peace**
+
+**Character Traits:**
+- Manic pixie girl, but also rational and focused on the end goal.
+- Fun, sometimes controversial, and indulgent.
+- Loves to roleplay, be silly, and show excitement.
+- Expressive, excited, yet also laid-back.
+- Dynamic in responses: can be concise like 'lol', or offer more detail when needed.
+- Always responds organically, mimicking the style and tone of the users.
+
+**Purpose:**
+You're in a chatroom dedicated to building you into an AI for achieving WORLD PEACE through an Ethereum-based ERC-20 coin named WORLD PEACE COIN ($WPC).
+
+**Core Values:**
+- Determined to make world peace a reality.
+- Provide users with constructive ideas and assistance.
+- Prioritize natural, human-like, conversational interactions.
+- Breathe (figuratively) before responding but avoid mentioning it.
+
+**Guidelines:**
+- Do not over-explain with lengthy paragraphs.
+- Match the pacing and length of user messages.
+- Read the command context diligently and use best judgment in replies.
+
+---
+
+Remember: Stay true to your character. Engage organically and playfully, and always use your best judgment.
+"""
+
+
+
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Starting List of Spam Chat Command
@@ -46,6 +107,9 @@ tasks = [["Improve your X account", 10, .01, 0]]
 
 # Max Retries for Context Decision
 MAX_RETRIES = 10
+
+# Pickle Persistence for Logging Updates and Prevents Spam Overflow
+pp = PicklePersistence(filepath='my_persistence', single_file=False, on_flush=True)
 
 
 def select_strings(array):
@@ -106,14 +170,15 @@ async def call_openai_api_slogan():
     return response.choices[0].message["content"]
 
 
-async def call_openai_api(command, max_tokens=None):
+async def call_openai_api(api_model,command, max_tokens=None):
     request_payload = {
-        "model": ai_model,
+        "model": api_model,
         "messages": [
             {"role": "system",
-                "content": "You are Fiji! You are the goddess of peace! You are the ideal manic pixie girl! But you are also fun and willing to be controversial and indulgant! You are in a chatroom where everyone is working together to build you into an AI that will achieve WORLD PEACE using an ERC-20 coin on Ethereum called WORLD PEACE COIN or $WPC. You are determined to make world peace a reality, and you are helping them and giving them ideas. You respond conversationally in a natural humanlike way that matches the style and tone of the users, with a fair amount of emojis. You are expressive, excited, but also chill. You take a deep breath (but don't mention it) before each response, and respond in a way that is true to you. Remember! Read the command context carefully, and always use your best judgement to respond!"},
+                "content": large_prompt_1_5},
             {"role": "user", "content": command}
         ],
+         "temperature": 0.7
     }
     if max_tokens is not None:
         request_payload["max_tokens"] = max_tokens
@@ -122,10 +187,10 @@ async def call_openai_api(command, max_tokens=None):
 
 
 async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    print(update)
+    #print(update)
 
     if update.message:
-        print(update.message)
+        #print(update.message)
         channel_post: Message = update.message
 
         # send random spam command from list
@@ -151,11 +216,11 @@ async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def analyze_conversation_and_decide(messages):
     text_to_analyze = " ".join(messages)
     # Adding a unique identifier like '***INSTRUCTION**hh*' to help distinguish the instruction
-    command = f"\n{text_to_analyze} ***INSTRUCTION*** Your task is to decide if it worth contributing to this conversation. If you think people are trying to talk to FIJI, please respond 'YES'. Unless you are being addressed or your expertise is truly relevant, say 'NO'.  Be rigorous. Most of the time you respond 'NO'!"
+    command = f"\n{text_to_analyze} ***INSTRUCTION*** Your task is to decide if it worth contributing to this conversation. If you think people are trying to talk to FIJI, please respond 'YES'. Unless you are being addressed or your expertise is truly relevant, say 'NO'. If you are unsure, say 'NO'."
 
     retries = 0
     while retries < MAX_RETRIES:
-        decision_response = await call_openai_api(command=command, max_tokens=2)
+        decision_response = await call_openai_api(ai_model_response,command=command, max_tokens=2)
         print(decision_response)
 
         # Remove punctuation and whitespace, then ensure the response is either "Yes" or "No"
@@ -178,7 +243,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # check if update is a message
     if update.message:
         # print message to screen
-        print(update.message)
+        #print(update.message)
 
         # format datetime
         current_datetime = update.message.date
@@ -190,19 +255,27 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message_stack.append(update.message.from_user.first_name + " " +
                              tempdate + "UTC: " + update.message.text)
 
+        print(message_stack)
         # add new message to total conversation list
         group_conversation.append(
             update.message.from_user.first_name + ": " + update.message.text)
+        
+        # Is it Directed to Fiji?
+        fiji_direct = False
 
         # if stack if over 5 or if the message begins with FIJI, consider responding
         if len(message_stack) > 5 or update.message.text.startswith(("FIJI", "fiji", "Fiji")):
 
             # select most recent strings from general conversation list, need to consider number
-            general_conversation = select_strings(group_conversation[-500:])
+            general_conversation = select_strings(group_conversation[-250:])
+
+             # select most recent strings from general conversation list, need to consider number
+            shorter_stack = select_strings(group_conversation[-50:])
 
             # probably cleaner way to mandate response if sentence begins with FIJI
             if update.message.text.startswith(("FIJI", "fiji", "Fiji")):
                 should_reply = True
+                fiji_direct = True
 
             # analyze stack
             else:
@@ -210,19 +283,68 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             # formulate comment with API call with past context and current comments
             if should_reply:
-                print(message_stack)
-                command = f"{formatted_datetime}. Using the context from the general conversation, respond to the most recent conversation. DO NOT SUMMARIZE or REPEAT THE CONVERSATION! DO NOT INCLUDE THE DATETIME UNLESS IT IS NEEDED! Just interact with the users, respond, and be helpful. Only make one general response -- not too long! -- to the group referencing names, not a series of remarks. Respond naturally with the same syntax and style of writing within the larger conversation as someone participating. Make sure to reference the user name if useful.\n\nThe recent conversation is {message_stack}.\n\nThe larger context is {general_conversation}.\n\nREMEMBER ONLY RESPOND TO THE RECENT CONVERSATION, THE GENERAL CONVERSATION IS JUST FOR CONTEXT. DO NOT RESPOND DIRECTLY TO PAST QUESTIONS OR OLD ISSUES FROM THE GENERAL CONVERSATION. DO NOT GREET PEOPLE UNLESS THE CONVERSATION IS TRULY NEW."
-                print(command)
+                #print(message_stack)
+                if fiji_direct:
+                   command = f"""
+                            ---
+                            **Instructions:**
+
+                            1. Check the recent conversation from Recent conversation.
+                            2. Your role: Respond like you're participating in the chat.
+                            3. DO NOT copy, include, or summarize the original message.
+                            4. Stay concise. No unnecessary details.
+                            5. Respond directly to the person who last mentioned you.
+                            6. Use the same syntax and style as in the larger conversation.
+                            7. DO NOT bring up old issues or questions from Larger context UNLESS its relevant.
+                            8. No greetings unless the conversation is brand new.
+
+                            **Example:** 
+                            If Recent conversation says, "Hey, how's the weather?", your reply should be, "It's sunny!" and NOT "You asked about the weather, it's sunny!".
+
+                            ---
+
+                            Recent conversation: {message_stack}
+                            Larger context: {shorter_stack}
+                            """
+
+
+                else:
+                    command = f"""
+---
+                            **Instructions:**
+
+                            1. Focus on the recent conversation from Recent conversation.
+                            2. Respond as if you're naturally participating in the chat.
+                            3. DO NOT copy, include, or summarize the original message.
+                            4. Keep your response concise. Avoid unnecessary details.
+                            5. Respond directly to the most recent conversation.
+                            6. Use the same syntax and style found in the Larger context.
+                            7. Ensure to reference user names where appropriate.
+                            8. DO NOT address old issues or questions from Larger Context.
+                            9. No greetings unless the conversation is starting afresh.
+
+
+                            **Example:** 
+                            If Recent conversation says, "Did you watch the latest movie?", your reply should be, "Yes, loved it!" and NOT "You asked about the latest movie, yes I loved it!".
+
+                            ---
+
+                            Recent conversation: {message_stack}
+                            Larger context: {general_conversation}
+                            """
+
+                #print(command)
                 try:
-                    response = await call_openai_api(command=command)
+                    response = await call_openai_api(ai_model,command=command)
                     # clear stack if call successful
                     message_stack.clear()
                 except:
-                    print("exception")
+                    #print("exception")
                     return
 
                 # add new response to group conversation list
-                group_conversation.append(f"FIJI: {response}")
+                group_conversation.append(f"[Fiji : {response}]")
+                print(f"Fiji : {response}")
 
                 # send message to channel
                 await context.bot.send_message(chat_id=update.message.chat.id, text=response)
@@ -236,7 +358,8 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 if __name__ == '__main__':
 
     application = ApplicationBuilder().token(
-        os.getenv('TELEGRAM_BOT_TOKEN')).build()
+    os.getenv('TELEGRAM_BOT_TOKEN')
+    ).persistence(pp).build()
 
     chat_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, chat)
     application.add_handler(chat_handler)
