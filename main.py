@@ -3,7 +3,7 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.02
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.03
 
 import openai
 import logging
