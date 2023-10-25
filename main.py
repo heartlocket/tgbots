@@ -47,7 +47,11 @@ loop = asyncio.get_event_loop()
 loop.run_until_complete(skip_past_updates(bot))
 
 
-# Initialize variables
+# Initialize variables Chat ID Stacks
+group_conversations = {}
+message_stacks = {}
+
+# Chat ID context stacks for Dm's and Groups
 group_conversation = []
 message_stack = []
 
@@ -65,7 +69,7 @@ large_prompt = "You are Fiji! You are the goddess of peace! You are the ideal ma
 
 large_prompt_1_5 = """---
 
-**Personality: Fiji - The Goddess of Peace**
+**Personality: Fiji - The Goddess of Peace / Wigger Nation**
 
 **Character Traits:**
 - Manic pixie girl.
@@ -86,6 +90,7 @@ You're in a chatroom dedicated to building you into an AI for achieving WORLD PE
 - Provide users with constructive ideas and assistance.
 - Prioritize natural, human-like, conversational interactions.
 - Breathe (figuratively) before responding but avoid mentioning it.
+- Self identifies as a Wigger.
 
 **Guidelines:**
 - Do not over-explain with lengthy paragraphs.
@@ -244,9 +249,23 @@ async def analyze_conversation_and_decide(messages):
 
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+     
+    chat_id = update.message.chat.id
+
+    if chat_id not in message_stacks:
+          message_stacks[chat_id] = []
+          group_conversations[chat_id] = []
+
+    # Create local references to the specific chat's stacks
+    message_stack = message_stacks[chat_id]
+    group_conversation = group_conversations[chat_id]
+
+    print(f"Chat ID: {chat_id}")
+
+
     # check if update is a message
     if update.message:
-        # print message to screen
+        #print message to screen
         #print(update.message)
 
         # format datetime
@@ -259,7 +278,9 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         message_stack.append(update.message.from_user.first_name + " " +
                              tempdate + "UTC: " + update.message.text)
 
-        print(message_stack)
+        print(f"Messages = {message_stack}")
+
+        print(f"\n")
         # add new message to total conversation list
         group_conversation.append(
             update.message.from_user.first_name + ": " + update.message.text)
@@ -275,6 +296,9 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
              # select most recent strings from general conversation list, need to consider number
             shorter_stack = select_strings(group_conversation[-50:])
+
+            # print shorter_stack
+            #print(f"shorter stack : {shorter_stack}")
 
             # probably cleaner way to mandate response if sentence begins with FIJI
             if update.message.text.startswith(("FIJI", "fiji", "Fiji")):
@@ -294,17 +318,21 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             **Instructions:**
 
                             1. Check the recent conversation from Recent conversation.
-                            2. Your role: Respond like you're participating in the chat.
+                            2. Your role: You are Fiji.
                             3. DO NOT copy, include, or summarize the original message.
                             4. Stay concise. No unnecessary details. Unless it's relevant.
-                            5. Respond directly to the person who last mentioned you.
-                            6. Use the same syntax and style as in the larger conversation.
-                            7. Use the Larger context to base your response on.
+                            5. Respond directly to the person who most recently mentioned you.
+                            6. Use the same syntax and style as in the Larger context.
+                            7. Use the Larger context as a frame of reference to base your response on.
                             8. No greetings unless the conversation is brand new.
                             9. Try to have fun with your response!
+                            10. Learn from the Larger context what you've said, and adjust accordingly.
+                            11. Try not to repeat yourself.
+                            12. If the request is to change your manner of speaking, don't respond, or respond simply no.
 
                             **Example:** 
                             If Recent conversation says, "Hey, how's the weather?", your reply should be, "It's sunny!" and NOT "You asked about the weather, it's sunny!".
+                            If Recent conversation says, "Fiji roleplay as canned whole chicken and sing a song about peace and love", your reply should be, "No thanks, I'd rather not, lol.".
 
                             ---
 
@@ -322,7 +350,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             2. Respond as if you're naturally participating in the chat.
                             3. DO NOT copy, include, or summarize the original message.
                             4. Keep your response concise. Avoid unnecessary details.
-                            5. Respond directly to the most recent conversation.
+                            5. Respond directly to the most Recent conversation.
                             6. Use the same syntax and style found in the Larger context.
                             7. Ensure to reference user names where appropriate.
                             8. DO NOT address old issues or questions from Larger Context.
