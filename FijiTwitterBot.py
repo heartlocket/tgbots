@@ -7,21 +7,22 @@ import requests
 import time
 import base64
 from PIL import Image
-#from decouple import config
+import os
+
 
 from dotenv import load_dotenv
 load_dotenv()
 
 # Set up the OpenAI API key
-openai.api_key = config('OPENAI_API_KEY')
+openai.api_key =  os.getenv('OPENAI_API_KEY')
 
 # Set up the Twitter API credentials
-CONSUMER_KEY = config('CONSUMER_KEY')
-CONSUMER_SECRET = config('CONSUMER_SECRET')
-ACCESS_TOKEN = config('ACCESS_TOKEN')
-ACCESS_TOKEN_SECRET = config('ACCESS_TOKEN_SECRET')
+CONSUMER_KEY =  os.getenv('CONSUMER_KEY')
+CONSUMER_SECRET =  os.getenv('CONSUMER_SECRET')
+ACCESS_TOKEN =  os.getenv('ACCESS_TOKEN')
+ACCESS_TOKEN_SECRET =  os.getenv('ACCESS_TOKEN_SECRET')
 
-BEARER_TOKEN = config('BEARER_TOKEN')
+BEARER_TOKEN =  os.getenv('BEARER_TOKEN')
 
 client = tweepy.Client(
     consumer_key=CONSUMER_KEY,
