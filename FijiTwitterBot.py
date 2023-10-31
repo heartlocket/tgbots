@@ -7,7 +7,7 @@ import requests
 import time
 import base64
 from PIL import Image
-from decouple import config
+#from decouple import config
 
 from dotenv import load_dotenv
 load_dotenv()
