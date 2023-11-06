@@ -8,6 +8,7 @@ import time
 import base64
 from PIL import Image
 import os
+import random
 #test
 
 from dotenv import load_dotenv
@@ -302,4 +303,56 @@ def run_bot():
         # Clean up: delete the temporary image file
         #import os
         #os.remove(downloaded_image_path)
+
+
+#THE FOLLOWING FUNCTIONS ARE FOR NFT HYPE POSTS OK THANKS
+# Function to select a random image from a folder
+folder_path = "NFTDWN"
+
+def select_random_image():
+    print ("All images in folder: " + str(os.listdir(folder_path)))
+    images = os.listdir(folder_path)
+    return random.choice(images)
+
+def generate_message():
+    response = openai.ChatCompletion.create(
+        model="gpt-4",  # Replace with your model of choice, if different
+        messages=[
+            {
+                "role": "system", 
+                "content": large_prompt_1_5
+            },
+            {
+                "role": "user", 
+                "content": "Please write a tweet hyping up the FIJI NFTs for World Peace Coin, include the cashtag '$WPC', and mention the NFTs are created by the artists behind Sproto Gremlins. You must keep your tweet under 200 characters."
+            }
+        ],
+        max_tokens=100
+    )
+    # In the ChatCompletion response, you access the 'content' of the message directly.
+    return response['choices'][0]['message']['content'].strip()
+
+def generate_NFT_tweet(): 
+    NFT_msg = generate_message()
+    NFT_img = ("./NFTDWN/" + str(select_random_image()))
+    try:
+        if NFT_img:
+            # If media_path is provided, upload the media
+
+            media = api.media_upload(NFT_img)
+            media_id = media.media_id_string
+            tweet = client.create_tweet(text=NFT_msg, media_ids=[media_id])
+            
+        else:
+            # If no media_path is provided, just post a text tweet
+            tweet = client.create_tweet(text=NFT_msg)
+
+        tweet_id = tweet.data['id']
+        return tweet_id
+
+    except TweepyException as error:  
+        print(f"Error posting tweet: {error}")
+        return None
+
+
 

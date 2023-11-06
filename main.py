@@ -45,6 +45,7 @@ import string
 
 import getpass
 
+nft_ctr = 0
 
 print("I AM ALIVE... STARTING...")
 
@@ -289,6 +290,7 @@ async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # function to decide whether to comment, hacky now, need to learn best practices for this
 async def tweet():
+    global nft_ctr
     global global_context
     global global_chat_id
 
@@ -299,13 +301,22 @@ async def tweet():
     success = False
     while not success:
         try:
+            print (nft_ctr)
             print("Trying to tweet...")
-            tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
-            tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
-            await global_context.bot.send_message(chat_id=global_chat_id, text=tweet_link)
-            print("Message sent to Telegram")
+            if (nft_ctr % 3 == 0):
+                print ("Tweeting NFT")
+                tweet_id = FijiTwitterBot.generate_NFT_tweet()
+                tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
+                await global_context.bot.send_message(chat_id=global_chat_id, text=tweet_link)
+                print(f"Tweeted NFT: {tweet_id}")
+            else:
+                tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
+                tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
+                await global_context.bot.send_message(chat_id=global_chat_id, text=tweet_link)
+                print("Message sent to Telegram")
             
             success = True
+            nft_ctr += 1
         except Exception as e:
             print(f"Error: {e}")
             await asyncio.sleep(3)
@@ -542,7 +553,6 @@ if __name__ == '__main__':
     slogan_handler = MessageHandler(filters.TEXT, slogan)
     application.add_handler(slogan_handler)
 
-    threading.Thread(target=run_tweet_loop, daemon=True).start()
     threading.Thread(target=run_tweet_loop, daemon=True).start()
 
 

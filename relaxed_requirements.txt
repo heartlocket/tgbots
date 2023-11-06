@@ -126,7 +126,6 @@ six
 sniffio
 soupsieve
 spark-parser
-SQLAlchemy
 stack-data
 tenacity
 TextGrid
