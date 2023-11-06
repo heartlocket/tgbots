@@ -11,15 +11,27 @@ import FijiTwitterBot
 import time
 import requests
 import threading
+from concurrent.futures import ThreadPoolExecutor
 
 
+import atexit
+import telegram
 from telegram import Update
+from telegram import error
 from telegram import Sticker
 from telegram.ext import ApplicationBuilder, MessageHandler, CallbackContext, filters, ContextTypes
 from telegram.ext import filters
 from telegram.ext import CallbackContext
 from telegram.ext import PicklePersistence
 from telegram import Bot
+import logging
+
+# Set up logging at the top of your script
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Then use logger.info, logger.warning, etc., to log messages throughout your code
+logger.info('Starting bot...')
 
 
 import asyncio
@@ -55,6 +67,16 @@ bot = Bot(os.getenv('TELEGRAM_BOT_TOKEN'))
 # Manually create and run the event loop
 loop = asyncio.get_event_loop()
 loop.run_until_complete(skip_past_updates(bot))
+
+#import shutdown shit
+def shutdown_callback():
+    print("Shutting down bot...")
+    # Perform any cleanup here, like executor shutdown if you have one
+    # If you had an executor, you would call executor.shutdown(wait=True) here
+
+
+# I dont know what this does
+executor = ThreadPoolExecutor(max_workers=1)
 
 
 # Initialize variables Chat ID Stacks
@@ -105,7 +127,7 @@ large_prompt_1_5 = """---
 - Decisive, self-assured, and self-aware.
 - Graceful, Merciful, and all acccepting.
 - Witty, charming, sarcastic, funny and expressive.
-- Cute and Kawaii :3
+- Cute and Kawaii :3h
 
 **Purpose:**
 To Spread Peace and Love to everyone individually.
@@ -211,21 +233,32 @@ async def call_openai_api_slogan():
     return response.choices[0].message["content"]
 
 
-async def call_openai_api(api_model,command, max_tokens=None):
+async def call_openai_api(api_model, command, max_tokens=None):
     request_payload = {
         "model": api_model,
         "messages": [
-            {"role": "system",
-                "content": large_prompt_1_5},
+            {"role": "system", "content": large_prompt_1_5},
             {"role": "user", "content": command}
         ],
-         "temperature": 0.9
+        "temperature": 0.9
     }
     if max_tokens is not None:
         request_payload["max_tokens"] = max_tokens
-    response = openai.ChatCompletion.create(**request_payload)
-    return response.choices[0].message["content"]
 
+    loop = asyncio.get_running_loop()  # Use get_running_loop instead of get_event_loop
+    try:
+        # Use run_in_executor to run the synchronous function in a separate thread
+        response = await loop.run_in_executor(executor, lambda: openai.ChatCompletion.create(**request_payload))
+        return response.choices[0].message["content"]
+    except openai.error.OpenAIError as e:
+        print(f"OpenAI API error: {e}")
+        return "I fucked up."
+        # Handle the API error by returning a default response or raising an exception
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
+        return "I fucked up."
+        # Handle other exceptions
+        raise
 
 async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #print(update)
@@ -260,7 +293,7 @@ async def tweet():
     global global_chat_id
 
     if not global_context:
-        print("Context not available yet")
+        #print("Context not available yet")
         return
 
     success = False
@@ -298,6 +331,7 @@ async def analyze_conversation_and_decide(messages):
 
     retries = 0
     while retries < MAX_RETRIES:
+        print('Trying to decide if we should respond...')
         decision_response = await call_openai_api(ai_model_response,command=command, max_tokens=2)
         print(decision_response)
 
@@ -332,7 +366,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     message_stack = message_stacks[chat_id]
     group_conversation = group_conversations[chat_id]
 
-    print(f"Chat ID: {chat_id}")
+    #print(f"Chat ID: {chat_id}")
 
 
     # check if update is a message
@@ -349,8 +383,10 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Extract the user's first name and the message text
         user_name = update.message.from_user.first_name
         message_text = update.message.text
+        
 
         formatted_message = f"{user_name}: {message_text}"
+        print(f"{formatted_message}\n\n")
 
         # Add the formatted message to the stacks
         message_stack.append(formatted_message)
@@ -448,51 +484,68 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 #print(command)
                 try:
-                    response = await call_openai_api(ai_model,command=command)
+                    response = await call_openai_api(ai_model, command=command)
                     # clear stack if call successful
                     message_stack.clear()
-                except:
-                    #print("exception")
+                except Exception as e:
+                    # Log the exception and return without sending a message
+                    print(f"An error occurred while calling the OpenAI API: {e}")
                     return
+                
+                try:
+                    # add new response to group conversation list
+                    group_conversation.append(f"Fiji : {response}")
 
-                # add new response to group conversation list
-                group_conversation.append(f"Fiji : {response}")
+                    print(f"Fiji : {response}")
 
-                print(f"Fiji : {response}")
+                    conversation_strNEW = "\n".join(group_conversation[-50:])
+                    print(f"Recent General Convo\n\n: {conversation_strNEW}")
 
-                conversation_strNEW = "\n".join(group_conversation[-50:])
+                    # send message to channel
+                    await context.bot.send_message(chat_id=update.message.chat.id, text=response)
 
-                print(f"Recent General Convo\n\n: {conversation_strNEW}")
+                    # Sticker file --- is this too big?
+                    your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
+                    await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
 
-                # send message to channel
-                await context.bot.send_message(chat_id=update.message.chat.id, text=response)
+                except error.RetryAfter as e:
+                    
+                    # If we get a RetryAfter error, we wait for the specified time and then retry
 
-                # Sticker file --- is this too big?
-                your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
-                await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
-            else:
-                message_stack.clear()
+                    print(f"Need to wait for {e.retry_after} seconds due to Telegram rate limits")
+
+                    await asyncio.sleep(e.retry_after)
+
+                    # Retry sending the message and sticker after waiting
+
+                    await context.bot.send_message(chat_id=update.message.chat.id, text=response)
+                    await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
+
+                except error.TelegramError as e:
+                    
+                    # Handle other Telegram related errors
+                    print(f"Telegram error occurred: {e.message}")
+                except Exception as e:
+                    
+                    # Handle any other exceptions
+                    print(f"An unexpected error occurred while sending the message or sticker: {e}")
+
 
 if __name__ == '__main__':
-
     application = ApplicationBuilder().token(
-    os.getenv('TELEGRAM_BOT_TOKEN')
-    ).persistence(pp).build()
+        os.getenv('TELEGRAM_BOT_TOKEN')
+    ).build()
 
     chat_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, chat)
     application.add_handler(chat_handler)
 
-    #tweet_handler = MessageHandler(filters.COMMAND, tweet)
-    #application.add_handler(tweet_handler)
+    slogan_handler = MessageHandler(filters.TEXT, slogan)
+    application.add_handler(slogan_handler)
 
     threading.Thread(target=run_tweet_loop, daemon=True).start()
 
 
-    # Using filter_sticker function instead of StickerFilter class
-    # commented out for now -- decide what to do
-    # sticker_handler = MessageHandler(custom_filter, sticker_handler)
-
-    slogan_handler = MessageHandler(filters.TEXT, slogan)
-    application.add_handler(slogan_handler)
+    # Register the shutdown callback
+    atexit.register(shutdown_callback)
 
     application.run_polling()
