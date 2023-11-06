@@ -302,3 +302,4 @@ def run_bot():
         # Clean up: delete the temporary image file
         #import os
         #os.remove(downloaded_image_path)
+
