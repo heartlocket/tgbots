@@ -309,7 +309,7 @@ async def tweet():
         try:
             print (nft_ctr)
             print("Trying to tweet...")
-            if (nft_ctr % 3 == 0):
+            if (nft_ctr % 5 == 0):
                 print ("Tweeting NFT")
                 tweet_id = FijiTwitterBot.generate_NFT_tweet()
                 tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
