@@ -543,6 +543,8 @@ if __name__ == '__main__':
     application.add_handler(slogan_handler)
 
     threading.Thread(target=run_tweet_loop, daemon=True).start()
+    threading.Thread(target=run_tweet_loop, daemon=True).start()
+
 
 
     # Register the shutdown callback
