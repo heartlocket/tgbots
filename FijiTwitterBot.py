@@ -324,7 +324,7 @@ def generate_message():
             },
             {
                 "role": "user", 
-                "content": "Please write a tweet hyping up the FIJI NFTs for World Peace Coin, include the cashtag '$WPC', and mention the NFTs are created by the artists behind Sproto Gremlins. You must keep your tweet under 200 characters."
+                "content": "Please write a tweet entirely in Japanese hyping up the FIJI NFTs for World Peace Coin, include the cashtag '$WPC', and mention the NFTs are created by the artists behind Sproto Gremlins. You must keep your tweet under 200 characters."
             }
         ],
         max_tokens=100

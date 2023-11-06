@@ -24,10 +24,12 @@ from telegram.ext import filters
 from telegram.ext import CallbackContext
 from telegram.ext import PicklePersistence
 from telegram import Bot
+from telegram.error import TimedOut
 import logging
 
 # Set up logging at the top of your script
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Then use logger.info, logger.warning, etc., to log messages throughout your code
@@ -70,11 +72,10 @@ loop = asyncio.get_event_loop()
 loop.run_until_complete(skip_past_updates(bot))
 
 #import shutdown shit
-def shutdown_callback():
+async def shutdown_callback(application):
     print("Shutting down bot...")
-    # Perform any cleanup here, like executor shutdown if you have one
-    # If you had an executor, you would call executor.shutdown(wait=True) here
-
+    await application.shutdown()
+    # Perform any additional cleanup here if necessary
 
 # I dont know what this does
 executor = ThreadPoolExecutor(max_workers=1)
@@ -234,6 +235,11 @@ async def call_openai_api_slogan():
     return response.choices[0].message["content"]
 
 
+
+
+
+
+
 async def call_openai_api(api_model, command, max_tokens=None):
     request_payload = {
         "model": api_model,
@@ -332,6 +338,7 @@ def run_tweet_loop():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(tweet_loop())
+    pass
         
 
 
@@ -540,6 +547,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     
                     # Handle any other exceptions
                     print(f"An unexpected error occurred while sending the message or sticker: {e}")
+        pass
 
 
 if __name__ == '__main__':
@@ -560,4 +568,15 @@ if __name__ == '__main__':
     # Register the shutdown callback
     atexit.register(shutdown_callback)
 
-    application.run_polling()
+    while True:
+        try:
+            application.run_polling()
+        except TimeoutError as e:
+            logger.warning(f"Timeout occurred: {e}")
+            # Decide what to do next: retry, wait, or halt.
+            # For example, wait for 30 seconds before retrying.
+            time.sleep(30)
+        except Exception as e:
+            logger.error(f"An unexpected error occurred: {e}")
+            # Handle other exceptions if necessary.
+            break  # Or use `continue` if you want to keep the bot running.
