@@ -90,7 +90,7 @@ group_conversation = []
 message_stack = []
 
 # default AI model for OpenAI calls
-ai_model = "gpt-3.5-turbo"
+ai_model = "gpt-4-1106-preview"
 
 # Response Gpt-4 Model for discernemnt
 ai_model_response = "gpt-4"
@@ -238,8 +238,6 @@ async def call_openai_api_slogan():
 
 
 
-
-
 async def call_openai_api(api_model, command, max_tokens=None):
     request_payload = {
         "model": api_model,
@@ -345,13 +343,13 @@ def run_tweet_loop():
 async def analyze_conversation_and_decide(messages):
     text_to_analyze = " ".join(messages)
     # Adding a unique identifier like '***INSTRUCTION**hh*' to help distinguish the instruction
-    command = f"\n{text_to_analyze} ***INSTRUCTION*** Your task is to decide if it worth contributing to this conversation. If you think people are trying to talk to FIJI, please respond 'YES'. Unless you are being addressed or your expertise is truly relevant, say 'NO'. If you are unsure, say 'NO'."
+    command = f"\n{text_to_analyze} ***INSTRUCTION*** Decide if the conversation is worthy of enterting by responding 'YES' or 'NO'. Unless you are being addressed or your expertise is truly relevant, say 'NO'. If you are unsure, say 'NO'. You say 'NO' more than 75% of the time."
 
     retries = 0
     while retries < MAX_RETRIES:
         print('Trying to decide if we should respond...')
-        decision_response = await call_openai_api(ai_model_response,command=command, max_tokens=2)
-        print(decision_response)
+        decision_response = await call_openai_api(ai_model,command=command, max_tokens=2)
+        print("Decison" + decision_response)
 
         # Remove punctuation and whitespace, then ensure the response is either "Yes" or "No"
         stripped_response = strip_punctuation_and_case(decision_response)
@@ -367,6 +365,12 @@ async def analyze_conversation_and_decide(messages):
     # Fallback if maximum retries reached
     print("Max retries reached. Defaulting to 'No'.")
     return False
+
+
+def remove_prefix_case_insensitive(text, prefix):
+    if text.lower().startswith(prefix.lower()):
+        return text[len(prefix):]  # Remove the prefix
+    return text  # Return the original text if the prefix is not found
 
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -404,7 +408,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
 
         formatted_message = f"{user_name}: {message_text}"
-        print(f"{formatted_message}\n\n")
+        #print(f"{formatted_message}\n\n")
 
         # Add the formatted message to the stacks
         message_stack.append(formatted_message)
@@ -422,10 +426,10 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(message_stack) > 5 or update.message.text.startswith(("FIJI", "fiji", "Fiji")):
 
             # select most recent strings from general conversation list, need to consider number
-            general_conversation = select_strings(group_conversation[-250:])
+            general_conversation = select_strings(group_conversation[-3050:])
 
              # select most recent strings from general conversation list, need to consider number
-            shorter_stack = select_strings(group_conversation[-50:])
+            shorter_stack = select_strings(group_conversation[-2500:])
 
             conversation_str_message = "\n".join(message_stack)  # gpt read for message
             conversation_str_shorter = "\n".join(shorter_stack)  # gpt for shorter context
@@ -447,6 +451,9 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             # formulate comment with API call with past context and current comments
             if should_reply:
                 #print(message_stack)
+                #print(conversation_str_message)
+                print(conversation_str_shorter)
+                #print(conversation_str_group)
                 if fiji_direct:
                    command = f"""
                             ---
@@ -462,7 +469,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             8. Do not repeat content from prior messages.
                             9. Emulate the style in which users are conversing.
                             10. Do NOT ever use brackets in your replies.
-                            11. Use "Larger context" to inform your response, but do not reference it directly.
+                            12. Do NOT begin your message with "FIJI : " or "FIJI:" or "Fiji : " or "Fiji: "
 
                             **Example:** 
                             If Recent conversation says, "Hey, how's the weather?", your reply should be, "It's sunny!" and NOT "You asked about the weather, it's sunny!".
@@ -490,6 +497,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             9. Emulate the style in which users are conversing.
                             10. Do NOT ever use brackets in your replies.
                             11. Use "Larger context" to inform your response, but do not reference it directly.
+                            12. Do NOT begin your message with "FIJI : " or "FIJI:" or "Fiji : " or "Fiji: "
 
                             **Example:** 
                             If Recent conversation says, "Hey, how's the weather?", your reply should be, "It's sunny!" and NOT "You asked about the weather, it's sunny!".
@@ -512,15 +520,16 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 
                 try:
                     # add new response to group conversation list
-                    group_conversation.append(f"Fiji : {response}")
+                    formatted_response = remove_prefix_case_insensitive(response, "Fiji : ")
+                    group_conversation.append(f"Fiji: {formatted_response}")
 
-                    print(f"Fiji : {response}")
+                    print(f"Fiji PreFormatted : {response}")
 
-                    conversation_strNEW = "\n".join(group_conversation[-50:])
-                    print(f"Recent General Convo\n\n: {conversation_strNEW}")
+                    #conversation_strNEW = "\n".join(group_conversation[-50:])
+                    #print(f"Recent General Convo\n\n: {conversation_strNEW}")
 
                     # send message to channel
-                    await context.bot.send_message(chat_id=update.message.chat.id, text=response)
+                    await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
 
                     # Sticker file --- is this too big?
                     your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
@@ -536,7 +545,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                     # Retry sending the message and sticker after waiting
 
-                    await context.bot.send_message(chat_id=update.message.chat.id, text=response)
+                    await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
                     await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
 
                 except error.TelegramError as e:
@@ -563,11 +572,9 @@ if __name__ == '__main__':
 
     threading.Thread(target=run_tweet_loop, daemon=True).start()
 
-
-
     # Register the shutdown callback
-    atexit.register(shutdown_callback)
-
+    atexit.register(shutdown_callback, application)
+    
     while True:
         try:
             application.run_polling()
