@@ -3,7 +3,9 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.03
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.05
+
+#HELLO WORLD HEART GUY
 
 import openai
 import logging
@@ -429,7 +431,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             general_conversation = select_strings(group_conversation[-3050:])
 
              # select most recent strings from general conversation list, need to consider number
-            shorter_stack = select_strings(group_conversation[-2500:])
+            shorter_stack = select_strings(group_conversation[-500:])
 
             conversation_str_message = "\n".join(message_stack)  # gpt read for message
             conversation_str_shorter = "\n".join(shorter_stack)  # gpt for shorter context
@@ -443,10 +445,9 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             if update.message.text.startswith(("FIJI", "fiji", "Fiji")):
                 should_reply = True
                 fiji_direct = True
-
-            # analyze stack
             else:
-                should_reply = await analyze_conversation_and_decide(message_stack)
+                print("NOT DOING THIS ANYMORE")
+                should_reply = False
 
             # formulate comment with API call with past context and current comments
             if should_reply:
@@ -570,7 +571,9 @@ if __name__ == '__main__':
     slogan_handler = MessageHandler(filters.TEXT, slogan)
     application.add_handler(slogan_handler)
 
-    threading.Thread(target=run_tweet_loop, daemon=True).start()
+    #Turning off Tweets for a week, until better strategy to reset ALGO.
+
+    #threading.Thread(target=run_tweet_loop, daemon=True).start()
 
     # Register the shutdown callback
     atexit.register(shutdown_callback, application)
