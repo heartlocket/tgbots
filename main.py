@@ -14,6 +14,8 @@ import time
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+
 
 
 import atexit
@@ -531,9 +533,12 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     return
                 
                 try:
+                    
                     # add new response to group conversation list
                     formatted_response = remove_prefix_case_insensitive(response, "Fiji : ")
                     group_conversation.append(f"Fiji: {formatted_response}")
+                    #time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
+                    #insert_message(conn, ("Fiji", time_now, formatted_response))
 
                     print(f"Fiji PreFormatted : {response}")
 
