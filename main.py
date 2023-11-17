@@ -29,6 +29,13 @@ from telegram import Bot
 from telegram.error import TimedOut
 import logging
 
+from db_handler import create_connection, create_table, insert_message
+# Initialize the SQLite database connection
+database = "telegram_chat.db"
+conn = create_connection(database)
+create_table(conn)
+
+
 # Set up logging at the top of your script
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
                     level=logging.INFO)
@@ -412,6 +419,10 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         formatted_message = f"{user_name}: {message_text}"
         #print(f"{formatted_message}\n\n")
 
+
+        # Store the message in the SQLite database
+        insert_message(conn, (user_name, current_datetime, message_text))
+
         # Add the formatted message to the stacks
         message_stack.append(formatted_message)
         group_conversation.append(formatted_message)
@@ -561,6 +572,10 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 if __name__ == '__main__':
+
+    
+
+
     application = ApplicationBuilder().token(
         os.getenv('TELEGRAM_BOT_TOKEN')
     ).build()
