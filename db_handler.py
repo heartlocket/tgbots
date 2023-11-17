@@ -1,38 +1,39 @@
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
-from datetime import datetime
-# Import your SQLite database handling functions
-from db_handler import create_connection, create_table, insert_message
+import sqlite3
+from sqlite3 import Error
 
-# Telegram Bot Token
-BOT_TOKEN = 'YOUR_TELEGRAM_BOT_TOKEN'
+def create_connection(db_file):
+    """ Create a database connection to the SQLite database """
+    conn = None
+    try:
+        conn = sqlite3.connect(db_file)
+        return conn
+    except Error as e:
+        print(e)
+    return conn
 
-# Initialize the SQLite database connection
-database = "telegram_chat.db"
-conn = create_connection(database)
-create_table(conn)
+def create_table(conn):
+    """ Create a table for storing chat messages """
+    try:
+        cursor = conn.cursor()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS chat_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                message TEXT NOT NULL
+            )
+        ''')
+        conn.commit()
+    except Error as e:
+        print(e)
 
-# Function to handle messages
-def handle_messages(update, context):
-    username = update.effective_user.username
-    timestamp = datetime.now().isoformat()
-    message_text = update.message.text
-
-    # Insert message into the database
-    insert_message(conn, (username, timestamp, message_text))
-
-def main():
-    # Create Updater and pass it your bot's token.
-    updater = Updater(BOT_TOKEN, use_context=True)
-
-    # Get the dispatcher to register handlers
-    dp = updater.dispatcher
-
-    # Handle messages
-    dp.add_handler(MessageHandler(Filters.text & (~Filters.command), handle_messages))
-
-    # Start the Bot
-    updater.start_polling()
-    updater.idle()
-
-if __name__ == '__main__':
-    main()
+def insert_message(conn, message_data):
+    """ Insert a new message into the chat_history table """
+    sql = ''' INSERT INTO chat_history(username, timestamp, message)
+              VALUES(?,?,?) '''
+    try:
+        cursor = conn.cursor()
+        cursor.execute(sql, message_data)
+        conn.commit()
+    except Error as e:
+        print(e)
