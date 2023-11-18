@@ -413,6 +413,11 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         custom_format = "Now it is %B %d, %Y, and it is %I:%M%p UTC"
         formatted_datetime = current_datetime.strftime(custom_format)
 
+        first_name = update.message.from_user.first_name
+        last_name = update.message.from_user.last_name 
+        full_name = f"{first_name} {last_name}"
+
+
         # Extract the user's first name and the message text
         user_name = update.message.from_user.first_name
         message_text = update.message.text
@@ -423,7 +428,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
         # Store the message in the SQLite database
-        insert_message(conn, (user_name, current_datetime, message_text))
+        insert_message(conn, (full_name, current_datetime, message_text))
 
         # Add the formatted message to the stacks
         message_stack.append(formatted_message)
@@ -537,8 +542,8 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     # add new response to group conversation list
                     formatted_response = remove_prefix_case_insensitive(response, "Fiji : ")
                     group_conversation.append(f"Fiji: {formatted_response}")
-                    #time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
-                    #insert_message(conn, ("Fiji", time_now, formatted_response))
+                    time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
+                    insert_message(conn, ("Fiji", time_now, formatted_response))
 
                     print(f"Fiji PreFormatted : {response}")
 
