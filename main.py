@@ -10,20 +10,19 @@
 import openai
 import logging
 import FijiTwitterBot 
+from court import start_court
 import time
 import requests
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
-
-
 import atexit
 import telegram
 from telegram import Update
 from telegram import error
 from telegram import Sticker
-from telegram.ext import ApplicationBuilder, MessageHandler, CallbackContext, filters, ContextTypes
+from telegram.ext import ApplicationBuilder, MessageHandler, CallbackContext, filters, ContextTypes, CommandHandler
 from telegram.ext import filters
 from telegram.ext import CallbackContext
 from telegram.ext import PicklePersistence
@@ -581,10 +580,13 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
 
+def startcourt_command(update, context):
+    # Call the function to start the court session
+    start_court(update, context)
+
 if __name__ == '__main__':
 
-    
-
+  
 
     application = ApplicationBuilder().token(
         os.getenv('TELEGRAM_BOT_TOKEN')
@@ -595,6 +597,9 @@ if __name__ == '__main__':
 
     slogan_handler = MessageHandler(filters.TEXT, slogan)
     application.add_handler(slogan_handler)
+
+    startcourt_handler = CommandHandler('startcourt', startcourt_command)
+    application.add_handler(startcourt_handler)
 
     #Turning off Tweets for a week, until better strategy to reset ALGO.
 
