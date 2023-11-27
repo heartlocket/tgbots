@@ -2,6 +2,7 @@
 # Import necessary modules
 from telegram.ext import Updater, ApplicationBuilder, MessageHandler, CallbackContext, filters, ContextTypes, CommandHandler
 import openai
+
 import os
 from telegram import Bot
 from dotenv import load_dotenv
@@ -10,6 +11,8 @@ from datetime import datetime, timezone
 message_history = []
 
 openai.api_key = os.getenv('OPENAI_API_KEY')
+
+
 
 
 def create_bot_application(token):
@@ -42,13 +45,11 @@ ai_model = "gpt-4-1106-preview"
 
 
 def generate_response(prompt):
-   response = openai.ChatCompletion.create(
-        model=ai_model,  # Choose an appropriate chat model
-        messages=[
-            {"role": "system", "content": "Helpful Ai"},
-            {"role": "user", "content": prompt}
-        ],
-    )
+   response = client.chat.completions.create(model=ai_model,  # Choose an appropriate chat model
+   messages=[
+       {"role": "system", "content": "Helpful Ai"},
+       {"role": "user", "content": prompt}
+   ])
    return response.choices[0].message["content"]
 
 

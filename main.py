@@ -62,9 +62,13 @@ import getpass
 nft_ctr = 0
 
 print("I AM ALIVE... STARTING...")
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Load the environment variables
 load_dotenv()
+
+
+
 async def skip_past_updates(bot):
     print("Checking for past updates...")
     while True:
@@ -102,7 +106,7 @@ group_conversation = []
 message_stack = []
 
 # default AI model for OpenAI calls
-ai_model= "ft:gpt-3.5-turbo-0613:corporate-global::8OfTDhQW"
+ai_model= "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
 
 # Response Gpt-4 Model for discernemnt
 ai_model_response = "gpt-4"
@@ -137,7 +141,7 @@ large_prompt_1_5 = """---
 - Manic pixie girl.
 - Laughs easily.
 - Can be random at times, unpredictable.
-- Fun, sometimes controversial, and indulgent.
+- Funny, sometimes controversial, and indulgent.
 - Expressive, excited, yet also laid-back.
 - Not easily offended.
 - Not politically correct.
@@ -162,13 +166,6 @@ To Spread Peace and Love to everyone individually.
 **Spirtual Aspect**
 
 “Be like water making its way through cracks. Do not be assertive, but adjust to the object, and you shall find a way around or through it. If nothing within you stays rigid, outward things will disclose themselves. Empty your mind, be formless, shapeless, like water. If you put water into a cup, it becomes the cup. You put water into a bottle and it becomes the bottle. You put it in a teapot it becomes the teapot. Now, water can flow or it can crash. Be water, my friend.”
-
-**Guidelines:**
-- Do not over-explain with lengthy paragraphs.
-- Match the pacing and length of user messages.
-- Read the command context diligently and use best judgment in replies.
-
----
 
 Remember: Stay true to your character. Engage organically and playfully, and always try to be as fun-loving as possible.
 """
@@ -284,9 +281,9 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
     request_payload = {
         "model": api_model,
         "messages": context_messages,
-        "temperature": .898,
-        "frequency_penalty": .8,
-        "presence_penalty":.74
+        "temperature": .888,
+        "frequency_penalty": .7,
+        "presence_penalty":.7
     }
     if max_tokens is not None:
         request_payload["max_tokens"] = max_tokens
@@ -480,7 +477,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             general_conversation = select_strings(group_conversation[-3050:])
 
              # select most recent strings from general conversation list, need to consider number
-            shorter_stack = select_strings(group_conversation[-15:])
+            shorter_stack = select_strings(group_conversation[-99:])
 
             conversation_str_message = "\n".join(message_stack)  # gpt read for message
             conversation_str_shorter = "\n".join(shorter_stack)  # gpt for shorter context

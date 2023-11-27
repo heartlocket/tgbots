@@ -3,6 +3,7 @@
 import tweepy
 from tweepy.errors import TweepyException  # Updated import
 import openai
+
 import requests
 import time
 import base64
@@ -11,11 +12,13 @@ import os
 import random
 #test
 
+openai.api_key = os.getenv('OPENAI_API_KEY')
+
 from dotenv import load_dotenv
 load_dotenv()
 
 # Set up the OpenAI API key
-openai.api_key =  os.getenv('OPENAI_API_KEY')
+
 
 # Set up the Twitter API credentials
 CONSUMER_KEY =  os.getenv('CONSUMER_KEY')
@@ -102,14 +105,12 @@ default_prompt = ("A very brief, extremely effective peace propaganda tweet that
 
 # Generates a tweet based on the input prompt
 def generate_post(input):
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": large_prompt_1_5},
-            {"role": "user", "content": input}
-        ],
-        max_tokens=100,
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[
+        {"role": "system", "content": large_prompt_1_5},
+        {"role": "user", "content": input}
+    ],
+    max_tokens=100)
     return response.choices[0].message.content.strip()
 
 
@@ -145,14 +146,12 @@ def generate_improvement_prompt(last_prompt, top_tweets):
       """)
 
     # Send the constructed message to GPT-4 for improvement suggestions
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": large_prompt_1_5},
-            {"role": "user", "content": input_message}
-        ],
-        max_tokens=450,  # Assuming you want the prompt to be tweet-length
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[
+        {"role": "system", "content": large_prompt_1_5},
+        {"role": "user", "content": input_message}
+    ],
+    max_tokens=450)
 
     # Return the improved prompt
     return response.choices[0].message.content.strip()
@@ -163,23 +162,19 @@ def generate_improvement_prompt(last_prompt, top_tweets):
 def generate_image_prompt(input):
     tweet = input
     prompt = f"Generate a prompt, in a 3d anime style for whatever you decide, for an image to accompany the tweet: '{tweet}'"
-    response = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=[
-            {"role": "system", "content": large_prompt_1_5},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=150,
-    )
+    response = client.chat.completions.create(model="gpt-4",
+    messages=[
+        {"role": "system", "content": large_prompt_1_5},
+        {"role": "user", "content": prompt}
+    ],
+    max_tokens=150)
     return response.choices[0].message.content.strip()
 
 # Generates an image based on the input prompt, outputs the url of the image
 def generate_image(input):
-    response = openai.Image.create(
-        prompt=input,
-        n=1,
-        size="1024x1024"
-    )
+    response = client.images.generate(prompt=input,
+    n=1,
+    size="1024x1024")
     return response.data[0].url
 
 # Downloads the image from the url and saves it as a temporary file
@@ -315,20 +310,18 @@ def select_random_image():
     return random.choice(images)
 
 def generate_message():
-    response = openai.ChatCompletion.create(
-        model="gpt-4",  # Replace with your model of choice, if different
-        messages=[
-            {
-                "role": "system", 
-                "content": large_prompt_1_5
-            },
-            {
-                "role": "user", 
-                "content": "Please write a lively tweet entirely in Japanese using lots of emojis hyping up the FIJI NFTs for World Peace Coin, include the cashtag $WPC at the end of the tweet, and mention the NFTs are created by the artists behind Sproto Gremlins. You must keep your tweet under 200 characters."
-            }
-        ],
-        max_tokens=100
-    )
+    response = client.chat.completions.create(model="gpt-4",  # Replace with your model of choice, if different
+    messages=[
+        {
+            "role": "system", 
+            "content": large_prompt_1_5
+        },
+        {
+            "role": "user", 
+            "content": "Please write a lively tweet entirely in Japanese using lots of emojis hyping up the FIJI NFTs for World Peace Coin, include the cashtag $WPC at the end of the tweet, and mention the NFTs are created by the artists behind Sproto Gremlins. You must keep your tweet under 200 characters."
+        }
+    ],
+    max_tokens=100)
     # In the ChatCompletion response, you access the 'content' of the message directly.
     return response['choices'][0]['message']['content'].strip()
 

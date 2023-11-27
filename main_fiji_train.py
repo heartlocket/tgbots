@@ -8,6 +8,10 @@
 #HELLO WORLD HEART GUY
 
 import openai
+from openai import OpenAI
+
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'),
+api_key=os.getenv('OPENAI_API_KEY'))
 import logging
 import FijiTwitterBot 
 from court import start_court  # Assuming court.py contains a start_court function
@@ -118,7 +122,7 @@ global_context = None
 # Open Ai -- Lang Chain
 
 #os.environ['OPENAI_API_KEY'] = getpass.getpass('OpenAI API Key:')
-openai.api_key = os.getenv('OPENAI_API_KEY')
+
 
 
 # Old Prompt
@@ -175,7 +179,7 @@ Remember: Stay true to your character. Engage organically and playfully, and alw
 
 
 
-openai.api_key = os.getenv('OPENAI_API_KEY')
+
 
 # Starting List of Spam Chat Command
 spam = ["/PRAY_FOR_PEACE", "/WORLD_PEACE_NOW", "/I_AM_ALIVE",
@@ -241,13 +245,11 @@ async def call_openai_api_slogan():
     slogan = "You are a bot named Fiji in a Telegram server devoted to spreading WORLD PEACE. Please give a creative slogan beginning with a / that will promote peace. Only respond like /PRAY_FOR_PEACE or /WORLD_PEACE_NOW or something else interesting to you. Never include anything except the simple command!"
 
     # Call the OpenAI API to generate a response
-    response = openai.ChatCompletion.create(
-        model=ai_model,  # Choose an appropriate chat model
-        messages=[
-            {"role": "system", "content": "You are a bot named Fiji in a Telegram server devoted to spreading WORLD PEACE."},
-            {"role": "user", "content": slogan}
-        ],
-    )
+    response = client.chat.completions.create(model=ai_model,  # Choose an appropriate chat model
+    messages=[
+        {"role": "system", "content": "You are a bot named Fiji in a Telegram server devoted to spreading WORLD PEACE."},
+        {"role": "user", "content": slogan}
+    ])
 
     return response.choices[0].message["content"]
 
@@ -294,9 +296,9 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
     loop = asyncio.get_running_loop()  # Use get_running_loop instead of get_event_loop
     try:
         # Use run_in_executor to run the synchronous function in a separate thread
-        response = await loop.run_in_executor(executor, lambda: openai.ChatCompletion.create(**request_payload))
+        response = await loop.run_in_executor(executor, lambda: client.chat.completions.create(**request_payload))
         return response.choices[0].message["content"]
-    except openai.error.OpenAIError as e:
+    except openai.OpenAIError as e:
         print(f"OpenAI API error: {e}")
         return "I fucked up."
         # Handle the API error by returning a default response or raising an exception
