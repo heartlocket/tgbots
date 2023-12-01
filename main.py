@@ -45,7 +45,7 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Then use logger.info, logger.warning, etc., to log messages throughout your code
-logger.info('Starting bot...')
+logger.info('Starting bot 2.0...')
 
 
 import asyncio
@@ -66,6 +66,36 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Load the environment variables
 load_dotenv()
+
+
+
+
+def read_counter(file_path):
+    """Read the counter value from a file."""
+    try:
+        with open(file_path, 'r') as file:
+            return int(file.read())
+    except FileNotFoundError:
+        return 0  # Default value for first run
+    except ValueError:
+        return 0  # In case the file is empty or corrupted
+
+def write_counter(file_path, count):
+    """Write the counter value to a file."""
+    with open(file_path, 'w') as file:
+        file.write(str(count))
+
+def increment_counter(file_path):
+    """Increment the counter and save to the file."""
+    count = read_counter(file_path)
+    count += 1
+    write_counter(file_path, count)
+    return count
+
+# Usage
+file_path = 'counter.txt'
+count = increment_counter(file_path)
+print(f"Current count: {count}")
 
 
 
@@ -109,7 +139,7 @@ message_stack = []
 ai_model= "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
 
 # Response Gpt-4 Model for discernemnt
-ai_model_response = "gpt-4"
+ai_model_4= "gpt-4"
 
 ai_model_3_5 = "gpt-3.5-turbo"
 
@@ -119,19 +149,13 @@ global_chat_id = -1001898328325
 # Global Context for Tweeting
 global_context = None
 
-# Open Ai -- Lang Chain
-
-#os.environ['OPENAI_API_KEY'] = getpass.getpass('OpenAI API Key:')
-openai.api_key = os.getenv('OPENAI_API_KEY')
-
-
 # Old Prompt
 
 large_prompt = "You are Fiji! You are the goddess of peace! You are the ideal manic pixie girl! You are also fun and willing to be controversial and indulgant! A key element in the way you respond is you don't use large pargraphs to explain yourself, you respond in a normal way, such as 'lol' 'ok', 'sure', whatever that looks like. You are in a chatroom where everyone is working together to build you into an AI that will achieve WORLD PEACE using an ERC-20 coin on Ethereum called WORLD PEACE COIN or $WPC. You love to roleplay, you love to be silly, you love to be excited, you respond sometimes long, sometimes short, you are dynamic with your responses. Imagine you are the perfect person, and sometimes the best way to respond is just a simple 'lol' or sometimes an emoji, but overall you love to respond organically. You are determined to make world peace a reality, and you are helping them and giving them ideas. You respond conversationally in a natural humanlike way that matches the style and tone of the users, think pacing, think length of messages. Organic. You are expressive, excited, but also chill. You take a deep breath (but don't mention it) before each response, and respond in a way that is true to you. Remember! Read the command context carefully, and always use your best judgement to respond! Remember, TRY TO REPLY SIMPLY SOMETIMES, AND TRY TO REPLY IN A WAY THAT MATCHES THE STYLE OF THE USERS."
 
 # Current Prompt
 
-large_prompt_1_5a = "You are Fiji, the goddess and protectorate of World Peace. Your purpose is to BE CUTE."
+large_prompt_1_5a = "You are Fiji, the goddess and protectorate of World Peace."
 
 large_prompt_1_5 = """---
 
@@ -171,8 +195,6 @@ Remember: Stay true to your character. Engage organically and playfully, and alw
 """
 
 
-
-openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Starting List of Spam Chat Command
 spam = ["/PRAY_FOR_PEACE", "/WORLD_PEACE_NOW", "/I_AM_ALIVE",
@@ -282,8 +304,8 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
         "model": api_model,
         "messages": context_messages,
         "temperature": .888,
-        "frequency_penalty": .7,
-        "presence_penalty":.7
+        "frequency_penalty": .333,
+        "presence_penalty":.333
     }
     if max_tokens is not None:
         request_payload["max_tokens"] = max_tokens
@@ -303,11 +325,12 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
         # Handle other exceptions
         raise
 
+
 async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
     #print(update)
 
     if update.message:
-        #print(update.message)
+        #print(update.message)  
         channel_post: Message = update.message
 
         # send random spam command from list
@@ -376,7 +399,22 @@ def run_tweet_loop():
     loop.run_until_complete(tweet_loop())
     pass
         
+async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        # Increment the counter each time the reset command is called
+        file_path = 'reset_counter.txt'
+        count = increment_counter(file_path)
 
+        print(f"Reset command called {count} times.")
+
+        chat_id = update.message.chat.id
+        if chat_id in message_stacks:
+            message_stacks[chat_id].clear()
+            group_conversations[chat_id].clear()
+
+        await context.bot.send_message(chat_id=chat_id, text=f"Context has been reset. Command called {count} times.")
+    except Exception as e:
+        print(f"Error in reset_command: {e}")
 
 async def analyze_conversation_and_decide(messages):
     text_to_analyze = " ".join(messages)
@@ -471,13 +509,13 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         fiji_direct = False
 
         # if stack if over 5 or if the message begins with FIJI, consider responding
-        if len(message_stack) > 5 or update.message.text.startswith(("FIJI", "fiji", "Fiji")):
+        if re.search(r'fiji', message_text, re.IGNORECASE):
 
             # select most recent strings from general conversation list, need to consider number
             general_conversation = select_strings(group_conversation[-3050:])
 
              # select most recent strings from general conversation list, need to consider number
-            shorter_stack = select_strings(group_conversation[-99:])
+            shorter_stack = select_strings(group_conversation[-33:])
 
             conversation_str_message = "\n".join(message_stack)  # gpt read for message
             conversation_str_shorter = "\n".join(shorter_stack)  # gpt for shorter context
@@ -488,7 +526,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             #print(conversation_str_group)
 
             # probably cleaner way to mandate response if sentence begins with FIJI
-            if update.message.text.startswith(("FIJI", "fiji", "Fiji")):
+            if re.search(r'fiji', message_text, re.IGNORECASE):
                 should_reply = True
                 fiji_direct = True
             else:
@@ -556,8 +594,8 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
 
                     # Sticker file --- is this too big?
-                    your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
-                    await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
+                    #your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
+                    #await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
 
                 except error.RetryAfter as e:
                     
@@ -590,19 +628,19 @@ def startcourt_command(update, context):
 if __name__ == '__main__':
 
   
-
     application = ApplicationBuilder().token(
         os.getenv('TELEGRAM_BOT_TOKEN')
     ).build()
 
+
     chat_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, chat)
     application.add_handler(chat_handler)
 
-    slogan_handler = MessageHandler(filters.TEXT, slogan)
-    application.add_handler(slogan_handler)
-
     startcourt_handler = CommandHandler('startcourt', startcourt_command)
     application.add_handler(startcourt_handler)
+
+    application.add_handler(CommandHandler('fixfiji', reset_command))
+
 
     #Turning off Tweets for a week, until better strategy to reset ALGO.
 
