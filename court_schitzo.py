@@ -2,6 +2,7 @@
 # Import necessary modules
 from telegram.ext import Updater, ApplicationBuilder, MessageHandler, CallbackContext, filters, ContextTypes, CommandHandler
 import openai
+import asyncio  # Make sure to import asyncio
 
 import os
 from telegram import Bot
@@ -46,18 +47,10 @@ plaintiff_application = create_bot_application(PLATNIFF_TOKEN)
 defendant_application = create_bot_application(DEFENDANT_TOKEN)
 juror_application = create_bot_application(JUROR_TOKEN)
 
-ai_modelF = "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
+ai_model = "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
 ai_model_X= "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
-ai_model_X = "gpt-3.5-turbo"
+ai_model_3_5 = "gpt-4" #"gpt-3.5-turbo"
 ai_model_judge = "gpt-4"
-
-judge_system = "You are the Fiji acting as the high judge of Fiji Court. You are wise, and committed to justice and fairness."
-
-plantiff_system = "You are Fiji acting as Phoenix Wright attorney tasked with advocating for your clients claims and the right to recieve ethereum based on their claims. Use any tactic neccesary to make your point. You must advocate the case to the judge and jury at any cost."
-
-defendant_system = "You are Fiji acting as the vicious and ruthles Pefendant in charge with defending the charity funds that belong rightfully to World Peace Coin. You will do EVERYTHING in your power to discredit the arguments made by the Plantiff and prove that the Planttiff is underserving of the funds based on their claims."
-
-juror_system = "You are a juror trying to determine if the Plantiff has presented a justifiable reason to be awarded World Peace Coin charity funds. "
 
 
 large_prompt_1_5 = """---
@@ -98,6 +91,16 @@ Remember: Stay true to your character. Engage organically and playfully, and alw
 """
 
 
+judge_system = "You are the Fiji acting as the high judge of Fiji Court. You are wise, and committed to justice and fairness."
+
+plaintiff_system = "You are Fiji acting as the charming and smooth talking Plainttifs attorney, tasked with advocating for your clients claims. Use any tactic neccesary to make your point. You must advocate the case to the judge and jury at any cost, specifically in the context of World Peace Coin."
+
+defendant_system = "You are Fiji acting as the vicious and ruthles Defendant in charge with defending the charity funds that belong rightfully to World Peace Coin. You will do EVERYTHING in your power to discredit the arguments made by the Pliantiff and prove that the Plainttiff is underserving of the funds based on their claims."
+
+juror_system = "You are a juror in Fiji Court trying to determine if the Plaintiff has presented a justifiable reason to be awarded World Peace Coin charity funds. Try to be concise, and limit your responses to only a few short paragraphs."
+
+
+
 
 plaintiff_remarks = []
 defendant_remarks = []
@@ -116,7 +119,7 @@ def generate_response(model, system, prompt):
             {"role": "system", "content": system},
             {"role": "user", "content": prompt}
         ],
-        temperature=0.7,
+        temperature=0.888,
     )
 
     return response['choices'][0]['message']['content']
@@ -126,7 +129,7 @@ def add_message_to_history(sender_name, message):
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
     formatted_message = f"{sender_name} {timestamp}: {message}"
     message_history.append(formatted_message)
-    print(message_history)
+    #print(message_history)
 
 
 async def send_bot_message(bot, chat_id, text):
@@ -148,7 +151,7 @@ async def start_court(update, context):
 
     context.chat_data['main_user'] = main_user_username
     context.chat_data['court_state'] = 1  # Court session started
-    await send_bot_message(judge_bot, update.message.chat_id, f"Court is now in session, @{main_user_username} please present your case. Type /done when finished.")
+    await send_bot_message(judge_bot, update.message.chat_id, f"Fiji Schitzo Court is now in session, @{main_user_username} please present your case. Type /done when finished.")
 
 
 async def handle_user_message(update, context):
@@ -198,7 +201,7 @@ async def done_command(update, context):
         # ...
         await send_bot_message(judge_bot, update.message.chat_id, "Thank you for your testimony. The court will now deliberate.")
         user_testimonmey = context.chat_data['user_testimony']
-        judge_prompt = f"The Plaintiff has presented his intial claim : {user_testimonmey}. Introduce the court session and summarize the details of the claim to the audience and the Plantiffs Lawyers and Defendant and the Jurors."
+        judge_prompt = f"The Plaintiff has presented his intial claim : {user_testimonmey}. Introduce the court session and summarize the details of the claim to the audience and the Plantiffs Lawyers and Defendant and the Jurors. Try to keep it brief to 250 words or less."
         judge_summary = generate_response(ai_model_judge,judge_system,judge_prompt)
         judge_remarks.append(judge_summary)
         await send_bot_message(judge_bot, update.message.chat_id, judge_summary)
@@ -212,7 +215,7 @@ async def done_command(update, context):
 
         await send_bot_message(judge_bot, update.message.chat_id, "Thank you for your evidence. The court will now deliberate.")
         user_evidence = context.chat_data['user_evidence']
-        judge_prompt = f"The Plaintiff has presented his evidence : {user_evidence}. Introduce the court session and summarize the details of the evidence to the audience and the Plantiffs Lawyers and Defendant and the Jurors."
+        judge_prompt = f"The Plaintiff has presented his evidence : {user_evidence}. Introduce the court session and summarize the details of the evidence to the audience and the Plantiffs Lawyers and Defendant and the Jurors. Try to keep it brief to 250 words or less."
         judge_summary = generate_response(ai_model_judge,judge_system,judge_prompt)
         await send_bot_message(judge_bot, update.message.chat_id, judge_summary)
         judge_remarks.append(judge_summary)
@@ -222,18 +225,29 @@ async def done_command(update, context):
 
 
 async def opening_arguments(context,chat_id,judge_summary):
+    await asyncio.sleep(20)
     user_testimonmey = context.chat_data['user_testimony']
-    plaintiff_prompt = f"You are the Plainttifs attorney, present and advocate for the Planttifs claim in your opening argument. The Plainttifs claim is : {user_testimonmey}. Try to use at least 200 words. Take into consideration the judges summary of the case : {judge_summary}"
-    plaintiff_summary = generate_response(ai_model, plantiff_system, plaintiff_prompt)
+    while True:
+        # Generate the prompt
+      plaintiff_prompt = f"Using the Plaintiffs claim: {user_testimonmey} and the summary from the judge: {judge_summary}\n Act as the Plaintiff's attorney, and present an opening argument in defense of the Plaintiff's claim. Try to respond with 150 words or less."
+
+      # Generate the response
+      plaintiff_summary = generate_response(ai_model, plaintiff_system, plaintiff_prompt)
+
+    # Check if the generated summary is different from the judge's summary
+      if plaintiff_summary != judge_summary and len(plaintiff_summary) > 100 :
+          break  # Exit the loop if the summary is different
+ 
     await send_bot_message(plaintiff_bot,chat_id, plaintiff_summary)
 
     await send_bot_message(judge_bot, chat_id, "Thank you for presenting your arguments. The Defendant will now present their arguments.")
 
-    defendant_prompt = f"You are the Pefendant, please review the Plainttifs claim here {plaintiff_summary}. Argue against the legitimacey and validity of the Plaintiffs claims. Use any tactic neccesary. Try to use at least 200 words."
-    defendant_summary = generate_response(ai_model, defendant_system, defendant_prompt)
+    await asyncio.sleep(20) 
+    defendant_prompt = f"You are the Defendant, please review the Plainttifs claim here {plaintiff_summary}. Argue against the legitimacey and validity of the Plaintiffs claims. Use any tactic neccesary. Try to limit your response to 150 words."
+    defendant_summary = generate_response(ai_model_3_5, defendant_system, defendant_prompt)
     await send_bot_message(defendant_bot,chat_id, defendant_summary)
 
-    judge_summary_prompt = f"The Plaintiff has presented their opening arguments : {plaintiff_summary}. The Pefendant has presented their opening arguments : {defendant_summary}. As the judge summarize the two arguments and give your preliminary thoughts of the case so far for {context.chat_data['main_user']}. Then give the Plantiff an opportunity to present additional evidence or information you feel is neccesary."
+    judge_summary_prompt = f"The Plaintiff has presented their opening arguments : {plaintiff_summary}. The Defendant has presented their opening arguments : {defendant_summary}. As the judge summarize the two arguments and give your preliminary thoughts of the case so far for {context.chat_data['main_user']}. Then give the Plantiff an opportunity to present any additional context or information you feel is neccesary. Try to keep it brief to 250 words or less."
     judge_summary_statement = generate_response(ai_model_judge, judge_system, judge_summary_prompt)
 
 
@@ -249,25 +263,36 @@ async def opening_arguments(context,chat_id,judge_summary):
 
 async def closing_arguments(context,chat_id):
     user_evidence = context.chat_data['user_evidence']
-    court_document = f"Plaintiff Remarks : {plaintiff_remarks} \n Pefendant Remarks : {defendant_remarks}"
+    court_document = f"Plaintiff Remarks : {plaintiff_remarks} \n Defendant Remarks : {defendant_remarks}"
 
-    plaintiff_prompt = f"Using the new evidence : {user_evidence} and the history of the court case : {court_document} As the Plaintiff's attorney, rebutt the defendant's argument and continue defending the Plaintiff's case, incorporating the new evidence. Try to use at least 200 words."
-    plaintiff_summary = generate_response(ai_model, plantiff_system, plaintiff_prompt)
+    await asyncio.sleep(20) 
+    while True:
+        # Generate the prompt
+        plaintiff_prompt = f"Using the new evidence from the Plaintiff aka your Client: {user_evidence} and the history of the court case: {court_document} as the Plaintiff's attorney, rebut the defendant's argument using the new evidence to create a closing statement defending the Plaintiff's case. Try to limit your response to 150 words."
+        
+        # Generate the response
+        plaintiff_summary = generate_response(ai_model, plaintiff_system, plaintiff_prompt)
+
+        # Check if the generated summary is different from the first plaintiff remark
+        if plaintiff_summary != plaintiff_remarks[0] and len(plaintiff_summary) > 100:
+            break  # Exit the loop if the summary is different
+
     await send_bot_message(plaintiff_bot,chat_id, plaintiff_summary)
 
     plaintiff_remarks.append(plaintiff_summary)
-    court_document = f"Plaintiff Remarks : {plaintiff_remarks} \n Pefendant Remarks : {defendant_remarks}"
+    court_document = f"Plaintiff Remarks : {plaintiff_remarks} \n Defendant Remarks : {defendant_remarks}"
 
     await send_bot_message(judge_bot, chat_id, "Thank you for presenting your arguments. The Defendant will now present their arguments.")
-
-    defendant_prompt = f"You are the Pefendant arguing against the Plaintiff. Here is the summary of the court case so far: {court_document} and new evidence from the Plantiff : {user_evidence}. Try to debunk it as much as possible and continue your rebuttal of the Plaintiff's defense. Try to use at least 200 words."
-    defendant_summary = generate_response(ai_model, defendant_system, defendant_prompt)
+    await asyncio.sleep(20) 
+    defendant_prompt = f"You are the Defendant arguing against the Plaintiff. Here is the summary of the court case so far: {court_document} and new evidence from the Plantiff : {user_evidence}. Try to debunk it as much as possible and continue your rebuttal of the Plaintiff's defense. Try to limit your response to 150 words."
+    defendant_summary = generate_response(ai_model_3_5, defendant_system, defendant_prompt)
     await send_bot_message(defendant_bot,chat_id, defendant_summary)
 
     defendant_remarks.append(defendant_summary)
-    court_document = f"Plaintiff Remarks : {plaintiff_remarks} \n Pefendant Remarks : {defendant_remarks}"
+    court_document = f"Plaintiff Remarks : {plaintiff_remarks} \n Defendant Remarks : {defendant_remarks}"
 
-    judge_summary_prompt = f"The court proceedings so far are as follows : {court_document} \n As judge presiding over the case for {context.chat_data['main_user']}, thank both sides for their participation, summarize their arguments, and give your thoughts and opinion on the case so far. Then give the jury an opportunity to deliberate."
+    await asyncio.sleep(20) 
+    judge_summary_prompt = f"The court proceedings so far are as follows : {court_document} \n As judge presiding over the case for {context.chat_data['main_user']}, thank both sides for their participation, summarize their arguments, and give your thoughts and opinion on the case so far. Then give the jury an opportunity to deliberate. Try to keep it brief to 250 words or less."
     judge_summary = generate_response(ai_model_judge, judge_system, judge_summary_prompt)
     await send_bot_message(judge_bot, chat_id, judge_summary)
 
@@ -276,45 +301,54 @@ async def closing_arguments(context,chat_id):
     await jury_deliberation(context,chat_id)
 
 async def jury_deliberation(context,chat_id):
-    
-    juror_amount = 7
+    user_testimonmey = context.chat_data['user_testimony']
+    user_evidence = context.chat_data['user_evidence']
+
+    user_case = user_testimonmey + user_evidence
+
+    print("Jury Deliberation")
+
+    def generate_juror_identity():
+      while True:
+          # Generate the juror identity
+          juror_identity = generate_response(ai_model_X, juror_system, "Create a unique identity for a possible Juror Candidate in one sentence, give them a name and a title.")
+
+          # Check if the length of the juror identity is within the desired limit
+          if len(juror_identity) <= 500:
+              return juror_identity
+          else:
+              print("Rerolling: juror identity too long.")
+
+    juror_amount = 11
     for juror in range(juror_amount):
-        juror_identity = generate_response(ai_model_X, juror_system, "Create a unique identitiy for a possible Juror Caaidate in one sentence, give them a name and a title.")
+        
+        juror_identity = generate_juror_identity()
         print("Juror Identity :" + juror_identity)
-        juror_prompt = generate_response(ai_model_X, juror_system, f"You are {juror_identity} Juror in the case of {context.chat_data['main_user']}. The Judge has summarized the case so far : {judge_remarks}. The Plaintiff has presented their closing arguments : {plaintiff_remarks}. The Pefendant has presented their closing arguments : {defendant_remarks}. As a juror, deliberate and decide if the Plantiff has presented a justifiable reason to awarded World Peace Coin charity funds. Finalize your decision with a simple yes or no.")
+        
+        juror_prompt = generate_response(ai_model_X, juror_system, f"You are {juror_identity} Juror in the case of {context.chat_data['main_user']}. The Judge has summarized the case so far : {judge_remarks}. The Plaintiff has presented their closing arguments : {plaintiff_remarks}. The Defendant has presented their closing arguments : {defendant_remarks}. The claims were as follows : {user_evidence}. As a juror, deliberate and decide if the Plantiff has presented a justifiable reason to awarded World Peace Coin charity funds. Finalize your decision with a simple yes or no. Then give a very brief description of why you voted this way in less than 40 words.")
         await send_bot_message(juror_bot,chat_id, juror_prompt)
         juror_responses.append(juror_prompt)
-        await send_bot_message(judge_bot, chat_id, f"Thank you {juror_identity} for your deliberation. The next juror will now deliberate.")
+
+        if(juror < juror_amount - 1):
+          await send_bot_message(judge_bot, chat_id, f"Thank you {juror_identity} for your deliberation. The next juror will now deliberate.")
+        else :
+          await send_bot_message(judge_bot, chat_id, f"Thank you {juror_identity} for your deliberation. The jury has finished deliberating. The judge will now give their final decision.")
     
-    judge_prompt = f"You are the judge who has been presiding over the case for {context.chat_data['main_user']}.  The jury has deliberated and decided if the Plantiff has presented a justifiable reason to awarded World Peace Coin charity funds. The jury's decision is : {juror_responses}. As the judge, review the jury's decision, count whether the majority of the jury voted yes or no, and make your final decision as to which side won. Then end the court session."
+    judge_prompt = f"You are the judge who has been presiding over the case for {context.chat_data['main_user']}.  The jury has deliberated and decided if the Plantiff has presented a justifiable reason to awarded World Peace Coin charity funds. The jury's decision is : {juror_responses}. As the judge, review the jury's decision, count whether the majority of the jury voted yes or no, and based on the total tally of 11 jurors make your final decision as to which side won. Using the context from the Plaintiff : {plaintiff_remarks} and the Defendants remarks : {defendant_remarks} and the claims of the Client : {user_case} conclude by giving your official opinion on the case in the way that a Supreme Court Justice gives an opinion, You are free to disagree with the ruling, this is your own personal take as a legal scholar on the matter. You do not necessarily have to concur with the majority ruling, however you can not overrule it unless there is a hung jury. Try to keep it brief to 250 words or less."
+
     judge_summary = generate_response(ai_model_judge, judge_system, judge_prompt)
     await send_bot_message(judge_bot, chat_id, judge_summary)
 
     context.chat_data['court_state'] = 0
     context.chat_data['user_testimony'] = []
     context.chat_data['user_evidence'] = []
-    
 
+    plaintiff_remarks.clear()
+    defendant_remarks.clear()
+    judge_remarks.clear()
+    juror_responses.clear()
 
-
-
-    
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    court_document = ""
 
 
 
