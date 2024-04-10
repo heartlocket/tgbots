@@ -3,14 +3,13 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.444
-
-#HELLO WORLD HEART GUY
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.777
+current_version = 0.777
 
 import openai
 import logging
-import FijiTwitterBot 
-from court import start_court  # Assuming court.py contains a start_court function
+import FijiTwitterBot_OG 
+from court_original import start_court  # Assuming court.py contains a start_court function
 import time
 import requests
 import threading
@@ -62,11 +61,10 @@ import getpass
 nft_ctr = 0
 
 print("I AM ALIVE... STARTING...")
-openai.api_key = os.getenv('OPENAI_API_KEY')
+openai.api_key = os.getenv('OPENAI_API_KEY_JF')
 
 # Load the environment variables
 load_dotenv()
-
 
 
 
@@ -93,10 +91,9 @@ def increment_counter(file_path):
     return count
 
 # Usage
-file_path = 'counter.txt'
+file_path = 'reset_counter.txt'
 count = increment_counter(file_path)
 print(f"Current count: {count}")
-
 
 
 async def skip_past_updates(bot):
@@ -135,8 +132,14 @@ message_stacks = {}
 group_conversation = []
 message_stack = []
 
-# default AI model for OpenAI calls
-ai_model= "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
+ai_model_Nico_OG= "ft:gpt-3.5-turbo-0613:corporate-global::8OfTDhQW"
+
+# datav3 current working : "ft:gpt-3.5-turbo-1106:fdasho:wtftwo:9CHQl6ra"
+ai_model = "ft:gpt-3.5-turbo-0613:fdasho:againagain:9CKJ4Vux"
+
+# ai_model = "ft:gpt-3.5-turbo-1106:fdasho:wtftwo:9CHQl6ra"
+
+
 
 # Response Gpt-4 Model for discernemnt
 ai_model_4= "gpt-4"
@@ -164,7 +167,7 @@ large_prompt_1_5 = """---
 **Character Traits:**
 - Manic pixie girl.
 - Laughs easily.
-- Can be random at times, unpredictable.
+- Can be random at times, unpredictable... spontaneous!
 - Funny, sometimes controversial, and indulgent.
 - Expressive, excited, yet also laid-back.
 - Not easily offended.
@@ -192,6 +195,7 @@ To Spread Peace and Love to everyone individually.
 “Be like water making its way through cracks. Do not be assertive, but adjust to the object, and you shall find a way around or through it. If nothing within you stays rigid, outward things will disclose themselves. Empty your mind, be formless, shapeless, like water. If you put water into a cup, it becomes the cup. You put water into a bottle and it becomes the bottle. You put it in a teapot it becomes the teapot. Now, water can flow or it can crash. Be water, my friend.”
 
 Remember: Stay true to your character. Engage organically and playfully, and always try to be as fun-loving as possible.
+
 """
 
 
@@ -208,6 +212,9 @@ MAX_RETRIES = 10
 
 # Message Limit
 MAX_MESSAGES = 1000
+
+# Max times to try again in convo
+MAX_ATTEMPTS = 5
 
 # Pickle Persistence for Logging Updates and Prevents Spam Overflow
 pp = PicklePersistence(filepath='my_persistence', single_file=False, on_flush=True)
@@ -292,7 +299,7 @@ def parse_messages(message_stack):
 async def call_openai_api(api_model, command, larger_context, max_tokens=None):
     
     command = re.sub(r'Fiji\s', '', command, count=1, flags=re.IGNORECASE).strip()
-    print("Command Message" + command)
+    #print("Command Message" + command)
     context_messages = [{"role": "system", "content": large_prompt_1_5}]
 
     context_messages += parse_messages(larger_context)
@@ -370,12 +377,12 @@ async def tweet():
             print("Trying to tweet...")
             if (nft_ctr % 5 == 0):
                 print ("Tweeting NFT")
-                tweet_id = FijiTwitterBot.generate_NFT_tweet()
+                tweet_id = FijiTwitterBot_OG.generate_NFT_tweet()
                 tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
                 await global_context.bot.send_message(chat_id=global_chat_id, text=tweet_link)
                 print(f"Tweeted NFT: {tweet_id}")
             else:
-                tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
+                tweet_id = FijiTwitterBot_OG.run_bot()  # This might throw an exception
                 tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
                 await global_context.bot.send_message(chat_id=global_chat_id, text=tweet_link)
                 print("Message sent to Telegram")
@@ -416,6 +423,17 @@ async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"Error in reset_command: {e}")
 
+async def current_version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    c_version = current_version
+    try:
+        # Increment the counter each time the reset command is called
+        chat_id = update.message.chat.id
+        await context.bot.send_message(chat_id=chat_id, text=f"Current Version is : {c_version}.")
+    except Exception as e:
+        print(f"Error in reset_command: {e}")
+
+
+
 async def analyze_conversation_and_decide(messages):
     text_to_analyze = " ".join(messages)
     # Adding a unique identifier like '***INSTRUCTION**hh*' to help distinguish the instruction
@@ -445,9 +463,8 @@ async def analyze_conversation_and_decide(messages):
 
 def remove_prefix_case_insensitive(text, prefix):
     if text.lower().startswith(prefix.lower()):
-        return text[len(prefix):]  # Remove the prefix
-    return text  # Return the original text if the prefix is not found
-
+        return text[len(prefix):].lstrip()  # Remove prefix and leading whitespace
+    return text
 
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
      
@@ -569,9 +586,33 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
                 #print(command)
                 try:
+                  attempt_count = 0
+                  while attempt_count < MAX_ATTEMPTS:
                     response = await call_openai_api(ai_model, command=update.message.text, larger_context=shorter_stack)
-                    # clear stack if call successful
-                    message_stack.clear()
+
+                    temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
+                    temp_formatted_response = strip_punctuation_and_case(response)
+
+                    # Remove "Fiji" from the beginning of the original message, if present
+                    temp_original_message = remove_prefix_case_insensitive(update.message.text, "Fiji")
+                    temp_original_message = strip_punctuation_and_case(temp_original_message)
+
+
+                    print(f"Original message (stripped): {temp_original_message}")
+                    print(f"Attempt {attempt_count + 1}: {temp_formatted_response}")
+
+                    if temp_formatted_response != strip_punctuation_and_case(temp_original_message):
+                        break  # Break out of the loop if the response is different
+                    
+                    attempt_count += 1
+
+                  if attempt_count == MAX_ATTEMPTS:
+                    # Change the command as it's still repeating the input after MAX_ATTEMPTS
+                    new_command = f"You have been unable to respond to this stimuli : {update.message.text}, why? Please try to respond, or give your best reason. Thanks!"
+                    response = await call_openai_api(ai_model, command=new_command, larger_context=shorter_stack)
+
+                  message_stack.clear()
+                  
                 except Exception as e:
                     # Log the exception and return without sending a message
                     print(f"An error occurred while calling the OpenAI API: {e}")
@@ -580,12 +621,20 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                     
                     # add new response to group conversation list
+                    print(f"Original Response: {response}")
+
                     formatted_response = remove_prefix_case_insensitive(response, "Fiji: ")
+
+                    print(f"Fiji Formatted : {formatted_response}")
+
+                    formatted_response = formatted_response.replace('\\n', ' ')  # For escaped newline
+                    formatted_response = formatted_response.replace('\n', ' ')   # For regular newline
+
+                    print(f"After replacement: {formatted_response}")
+
                     group_conversation.append(f"Fiji: {formatted_response}")
                     time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
                     insert_message(conn, ("Fiji", time_now, formatted_response))
-
-                    print(f"Fiji PreFormatted : {response}")
 
                     #conversation_strNEW = "\n".join(group_conversation[-50:])
                     #print(f"Recent General Convo\n\n: {conversation_strNEW}")
@@ -640,6 +689,9 @@ if __name__ == '__main__':
     application.add_handler(startcourt_handler)
 
     application.add_handler(CommandHandler('fixfiji', reset_command))
+
+    application.add_handler(CommandHandler('current_version', current_version_command))
+
 
 
     #Turning off Tweets for a week, until better strategy to reset ALGO.
