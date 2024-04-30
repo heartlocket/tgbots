@@ -3,11 +3,10 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.900
-current_version = 0.900
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.888
+current_version = 0.888
 
 import openai
-from openai import OpenAI
 import logging
 import FijiTwitterBot
 # from court_schitzo import start_court  # Assuming court.py contains a start_court function
@@ -15,7 +14,6 @@ import time
 import requests
 import threading
 import re
-
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
@@ -64,9 +62,6 @@ nft_ctr = 0
 
 print("I AM ALIVE... STARTING...")
 openai.api_key = os.getenv('OPENAI_API_KEY_JF')
-
-openai_client = openai.OpenAI(api_key=openai.api_key)
-
 
 # Load the environment variables
 load_dotenv() 
@@ -312,33 +307,40 @@ def parse_messages(message_stack):
 
 
 async def call_openai_api(api_model, command, larger_context, max_tokens=None):
-    # Clean the command to remove specific keywords
+    
     command = re.sub(r'Fiji\s', '', command, count=1, flags=re.IGNORECASE).strip()
-
-    # Constructing the conversation context
+    #print("Command Message" + command)
     context_messages = [{"role": "system", "content": large_prompt_1_5}]
+
     context_messages += parse_messages(larger_context)
-    #context_messages.append({"role": "user", "content": command})
+    context_messages.append({"role": "user", "content": command})
+    print(context_messages)
 
-    print(context_messages)  # Debugging: Print context messages
 
+    request_payload = {
+        "model": api_model,
+        "messages": context_messages,
+        "temperature": .888,
+        "frequency_penalty": .333,
+        "presence_penalty":.333
+    }
+    if max_tokens is not None:
+        request_payload["max_tokens"] = max_tokens
+
+    loop = asyncio.get_running_loop()  # Use get_running_loop instead of get_event_loop
     try:
-      response = openai_client.chat.completions.create(
-          model=api_model,
-          messages=context_messages,
-          max_tokens=max_tokens or 150,  # Default to 150 tokens if not specified
-          temperature=0.888,
-          frequency_penalty=0.333,
-          presence_penalty=0.333
-      )
-      return response.choices[0].message.content
-    except openai.APIError as e:
+        # Use run_in_executor to run the synchronous function in a separate thread
+        response = await loop.run_in_executor(executor, lambda: openai.ChatCompletion.create(**request_payload))
+        return response.choices[0].message["content"]
+    except openai.error.OpenAIError as e:
         print(f"OpenAI API error: {e}")
-        return "Something went wrong with the AI response."
+        return "I fucked up."
+        # Handle the API error by returning a default response or raising an exception
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
-        raise  # Optionally re-raise the exception after logging
-
+        return "I fucked up."
+        # Handle other exceptions
+        raise
 
 
 async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -379,14 +381,12 @@ async def tweet():
 
     if not global_context:
         print("Context not available yet")
-        await asyncio.sleep(10)  # Short pause to prevent spamming the log too quickly
-        return False
-    
+        return
+
     success = False
 
     #print(f"global_context: {global_context}")
     #print(f"global_chat_id: {global_chat_id}")
-
     while not success:
         try:
             print (nft_ctr)
@@ -397,17 +397,14 @@ async def tweet():
                 tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
                 await context.bot.send_message(chat_id=chat_id, text=tweet_link)
                 print(f"Tweeted NFT: {tweet_id}")
-                
             else:
                 tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
                 tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
                 await context.bot.send_message(chat_id=chat_id, text=tweet_link)
                 print("Message sent to Telegram")
-                
 
             success = True
             nft_ctr += 1
-            return True
         except Exception as e:
             print(f"Error: {e}")
             await asyncio.sleep(3)
@@ -416,11 +413,8 @@ async def tweet():
 async def tweet_loop():
     while True:
         print("Starting tweet loop.. active")
-        tweeted = await tweet()
-        if tweeted:
-            print("Tweet successful, entering sleep mode for 2 hours.")
-            await asyncio.sleep(60 * 45)  # Sleep for 2 hours
-
+        await tweet()
+        await asyncio.sleep(15)
 
 def run_tweet_loop():
     loop = asyncio.new_event_loop()

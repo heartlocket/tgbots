@@ -4,7 +4,9 @@ from telegram.ext import Updater, ApplicationBuilder, MessageHandler, CallbackCo
 import openai
 from telegram.error import TimedOut
 
-from openai.error import ServiceUnavailableError
+import openai
+from openai import OpenAI
+
 import time
 
 import asyncio  # Make sure to import asyncio
@@ -21,6 +23,8 @@ message_history = []
 
 load_dotenv()
 openai.api_key = os.getenv('OPENAI_API_KEY_JF')
+
+openai_client = openai.OpenAI(api_key=openai.api_key)
 
 # Check if API key is set
 if not openai.api_key:
@@ -138,26 +142,34 @@ data = {
     "juror_responses": []
 }
 
-
 def generate_response(model, system, prompt, max_retries=5):
     retry_delay = 1  # Initial delay in seconds
     for attempt in range(max_retries):
         try:
-            response = openai.ChatCompletion.create(
-                model=model,  
+             response = openai_client.chat.completions.create(model=model,
                 messages=[
                     {"role": "system", "content": system},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.888,
             )
-            return response['choices'][0]['message']['content']
+             return response.choices[0].message.content.strip()
 
-        except ServiceUnavailableError:
+        except openai.APIError as e:
+            print(f"OpenAI API error: {e}")
             print(f"Service unavailable, retrying in {retry_delay} seconds...")
+
             time.sleep(retry_delay)
             retry_delay *= 2  # Exponential backoff
 
+            return "Something went wrong with the AI response."
+        except Exception as e:
+            
+            time.sleep(retry_delay)
+            retry_delay *= 2  # Exponential backoff
+
+            print(f"An unexpected error occurred: {e}")
+        
     # If all retries fail, you can either return a default response or raise an exception
     return "Sorry, the service is currently unavailable. Please try again later."
 

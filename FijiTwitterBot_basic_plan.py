@@ -21,6 +21,8 @@ openai_client = openai.OpenAI(api_key=openai.api_key)
 from dotenv import load_dotenv
 load_dotenv()
 
+# Set up the OpenAI API key
+
 
 # Set up the Twitter API credentials
 CONSUMER_KEY =  os.getenv('CONSUMER_KEY')
@@ -88,8 +90,6 @@ To Spread Peace and Love to everyone individually.
 Remember: Stay true to your character. Engage organically and playfully, and always try to be as fun-loving as possible.
 """
 
-ai_model = "ft:gpt-3.5-turbo-0613:fdasho:cv-113-mid:9Jg1N2Ee"
-
 # Read the prompt from prompt.txt
 def read_prompt_from_file(filename="prompt.txt"):
     with open(filename, "r") as file:
@@ -109,26 +109,13 @@ default_prompt = ("A very brief, extremely effective peace propaganda tweet that
 
 # Generates a tweet based on the input prompt
 def generate_post(input):
-    response = openai_client.chat.completions.create(model=ai_model,
+    response = openai_client.chat.completions.create(model="gpt-4",
     messages=[
         {"role": "system", "content": large_prompt_1_5},
         {"role": "user", "content": input}
     ],
     max_tokens=100)
     return response.choices[0].message.content.strip()
-
-
-
-def new_prompt():
-    response = openai_client.chat.completions.create(model=ai_model,
-    messages=[
-        {"role": "system", "content": large_prompt_1_5},
-        {"role": "user", "content": "Tweet the first thing that comes to your mind. Avoid hashtags. All lowercase. Keep it under 280 characters"}
-    ],
-    max_tokens=250)
-    return response.choices[0].message.content.strip()
-
-
 
 
 def generate_improvement_prompt(last_prompt, top_tweets):
@@ -178,38 +165,21 @@ def generate_improvement_prompt(last_prompt, top_tweets):
 # Generates a prompt for an image based on or corresponding to the input tweet
 def generate_image_prompt(input):
     tweet = input
-    prompt = f"You are Fiji. Generate a prompt which depicts yourself as the 3d rendered blonde anime goddess baased on the tweet: '{tweet}'"
-    response = openai_client.chat.completions.create(model="gpt-4",
+    prompt = f"Generate a prompt, in a 3d anime style for whatever you decide, for an image to accompany the tweet: '{tweet}'"
+    response = openai_client.chat.completions.createe(model="gpt-4",
     messages=[
         {"role": "system", "content": large_prompt_1_5},
         {"role": "user", "content": prompt}
     ],
-    max_tokens=500)
+    max_tokens=150)
     return response.choices[0].message.content.strip()
 
-
 # Generates an image based on the input prompt, outputs the url of the image
-def generate_image(input_prompt):
-    attempts = 0
-    while attempts < 5:
-        try:
-            response = openai_client.images.generate(prompt=input_prompt, n=1, size="1024x1024", model="dall-e-3")
-            return response.data[0].url
-        except openai.BadRequestError as e:
-            print(f"Attempt {attempts + 1}: Failed due to content policy violation. Error: {e}")
-            attempts += 1
-            if attempts == 5:
-                # Modify the prompt to be safer after 5 failed attempts
-                print("Modifying the prompt to comply with content policies.")
-                safer_prompt = input_prompt + " Please generate an image that is very safe and adheres to content guidelines."
-                response = openai_client.images.generate(prompt=safer_prompt, n=1, size="1024x1024", model="dall-e-3")
-                return response.data[0].url
-            else:
-                continue
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            break  # Break out of the loop if a non-policy related error occurs
-
+def generate_image(input):
+    response = openai_client.images.generate(prompt=input,
+    n=1,
+    size="1024x1024")
+    return response.data[0].url
 
 # Downloads the image from the url and saves it as a temporary file
 def download_image(url, filename='temp.jpg'):
@@ -286,33 +256,45 @@ def fetch_top_tweets(num_tweets=5, total_tweets_to_consider=200, account_id="171
     return top_tweet_texts
 
 
-
 def run_bot():
+
     while True:
-        # You can use a static prompt or generate a new one dynamically here
-        current_prompt = new_prompt()
+        # Fetch the top tweets from FijiWPC
+        top_tweets = fetch_top_tweets(num_tweets=5, total_tweets_to_consider=100, account_id="1713689743291199488")
+        for index, tweet in enumerate(top_tweets, start=1):
+          print(f"Tweet {index}: {tweet}\n")
 
-        # Generate a tweet text using a fixed or newly created prompt
-        #tweet_text = generate_post(current_prompt)
+        # Read the current prompt from a file
+        current_prompt = read_prompt_from_file()
 
-        tweet_text = current_prompt
-        print(f"Generated Tweet: {tweet_text}\n")
+        # Generate an improved prompt based on the current prompt and the top tweets
+        improved_prompt = generate_improvement_prompt(current_prompt, top_tweets)
 
-        # Optionally, generate an image prompt and an image
+        # Save the improved prompt to a file, so that it can be used as the basis for the next tweet
+        save_prompt_to_file(improved_prompt, "prompt.txt")
+
+        # Generate a tweet, by improving the current prompt based on past tweets
+        tweet_text = generate_post(improved_prompt)
+        print(f"Tweet: {tweet_text}\n")
+
+        # Generate an image prompt
         image_prompt = generate_image_prompt(tweet_text)
         print(f"Image Prompt: {image_prompt}\n")
 
+        # Generate an image
         image_url = generate_image(image_prompt)
         downloaded_image_path = download_image(image_url)
-        print(f"Downloaded Image URL: {image_url}\n")
+        print(f"Image URL: {image_url}\n")
+        
 
-        # Post the tweet with or without an image
-        tweet_id = post(tweet_text+" $WPC", downloaded_image_path)
+        # Post the tweet with the image
+        tweet_id = post(tweet_text, downloaded_image_path)
         if tweet_id:
-            print(f"Successfully posted tweet with ID: {tweet_id}\n")
+            print(f"Successfully posted tweet with ID: {tweet_id}")
             return tweet_id
         else:
-            print("Failed to post tweet.\n")
+            print("Failed to post tweet.")
+
 
         #tweet_id = post_tweet_with_media_v2(tweet_text, downloaded_image_path)
         #tweet_id = post_tweet("Tweepy Tweepyt6 Tweepy Tweepy")
@@ -331,9 +313,8 @@ def select_random_image():
     images = os.listdir(folder_path)
     return random.choice(images)
 
-
 def generate_message():
-    response = openai_client.chat.completions.create(model=ai_model,  # Replace with your model of choice, if different
+    response = openai_client.chat.completions.create(model="gpt-4",  # Replace with your model of choice, if different
     messages=[
         {
             "role": "system", 
@@ -341,24 +322,24 @@ def generate_message():
         },
         {
             "role": "user", 
-            "content": "In Japanese compose a wild tweet hyping up the FIJI NFTs for World Peace Coin. Mention the NFTs are created by the artists behind Sproto Gremlins. Use lots of emojis! You must keep your tweet under 200 characters."
+            "content": "Please write a lively tweet entirely in Japanese using lots of emojis hyping up the FIJI NFTs for World Peace Coin, include the cashtag $WPC at the end of the tweet, and mention the NFTs are created by the artists behind Sproto Gremlins. You must keep your tweet under 200 characters."
         }
     ],
     max_tokens=100)
     # In the ChatCompletion response, you access the 'content' of the message directly.
-    return response.choices[0].message.content.strip()
+    return response['choices'][0]['message']['content'].strip()
 
 def generate_NFT_tweet(): 
-    NFT_img_url, image_number = select_random_image()  # Now returns URL and number
-    NFT_msg = generate_message()  # Ensure this function returns the message for the tweet
-    NFT_img_path = download_image(NFT_img_url)  # Download the image from the URL
+    NFT_msg = generate_message()
+    NFT_img = ("./NFTDWN/" + str(select_random_image()))
     try:
-        if NFT_img_path:
-            # Upload the media
-            media = api.media_upload(NFT_img_path)
+        if NFT_img:
+            # If media_path is provided, upload the media
+
+            media = api.media_upload(NFT_img)
             media_id = media.media_id_string
-            # Create a tweet with the media
-            tweet = client.create_tweet(text=NFT_msg+f" Fiji {image_number} @FijisNFT $WPC", media_ids=[media_id])
+            tweet = client.create_tweet(text=NFT_msg, media_ids=[media_id])
+            
         else:
             # If no media_path is provided, just post a text tweet
             tweet = client.create_tweet(text=NFT_msg)
@@ -370,27 +351,5 @@ def generate_NFT_tweet():
         print(f"Error posting tweet: {error}")
         return None
 
-def select_random_image():
-    # Generates a random number between 1 and 3333
-    random_number = random.randint(1, 3333)
-    # Constructs the URL for the NFT image
-    image_url = f"https://fijis.io/image/{random_number}.png"
-    return image_url, random_number
 
-
-def download_image(image_url):
-    """ Downloads an image from a URL and returns the local path where it was saved. """
-    local_path = "./NFTDWN/temp_image.png"  # Temporary file path for the downloaded image
-    response = requests.get(image_url, stream=True)
-    if response.status_code == 200:
-        with open(local_path, 'wb') as image_file:
-            for chunk in response.iter_content(1024):
-                image_file.write(chunk)
-        return local_path
-    else:
-        print("Failed to download image")
-        return None
-
-#run_bot();
-#generate_NFT_tweet()
-
+run_bot();
