@@ -60,8 +60,14 @@ juror_application = create_bot_application(JUROR_TOKEN)
 OGNICO_ai_model_plaintiff = "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
 OGNICO_ai_model_juror= "ft:gpt-3.5-turbo-0613:corporate-global::8PTF6PwL"
 
+#midcute
 ai_model_plaintiff = "ft:gpt-3.5-turbo-0613:fdasho:cv-113-mid:9Jg1N2Ee"
 ai_model_juror= "ft:gpt-3.5-turbo-0613:fdasho:cv-113-mid:9Jg1N2Ee"
+
+#midhigh
+#ai_model_plaintiff = "ft:gpt-3.5-turbo-1106:fdasho:cv-113:9JfzGLfI"
+#ai_model_juror= "ft:gpt-3.5-turbo-1106:fdasho:cv-113:9JfzGLfI"
+
 
 #ai_model_plaintiff = "ft:gpt-3.5-turbo-0613:fdasho:againagain:9CKJ4Vux"
 #ai_model_juror= "ft:gpt-3.5-turbo-0613:fdasho:againagain:9CKJ4Vux"
@@ -146,13 +152,14 @@ def generate_response(model, system, prompt, max_retries=5):
     retry_delay = 1  # Initial delay in seconds
     for attempt in range(max_retries):
         try:
-             response = openai_client.chat.completions.create(model=model,
-                messages=[
-                    {"role": "system", "content": system},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=0.888,
-            )
+             response = openai_client.chat.completions.create(
+                  model=model,
+                  messages=[
+                      {"role": "system", "content": system},
+                      {"role": "user", "content": prompt}
+                  ],
+                  temperature=0.888,
+              )
              return response.choices[0].message.content.strip()
 
         except openai.APIError as e:
