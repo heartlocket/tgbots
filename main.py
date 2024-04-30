@@ -3,13 +3,13 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.777
-current_version = 0.777
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.888
+current_version = 0.888
 
 import openai
 import logging
-import FijiTwitterBot_OG 
-from court_original import start_court  # Assuming court.py contains a start_court function
+import FijiTwitterBot
+from court_schitzo import start_court  # Assuming court.py contains a start_court function
 import time
 import requests
 import threading
@@ -385,12 +385,12 @@ async def tweet():
             print("Trying to tweet...")
             if (nft_ctr % 5 == 0):
                 print ("Tweeting NFT")
-                tweet_id = FijiTwitterBot_OG.generate_NFT_tweet()
+                tweet_id = FijiTwitterBot.generate_NFT_tweet()
                 tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
                 await global_context.bot.send_message(chat_id=global_chat_id, text=tweet_link)
                 print(f"Tweeted NFT: {tweet_id}")
             else:
-                tweet_id = FijiTwitterBot_OG.run_bot()  # This might throw an exception
+                tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
                 tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
                 await global_context.bot.send_message(chat_id=global_chat_id, text=tweet_link)
                 print("Message sent to Telegram")
