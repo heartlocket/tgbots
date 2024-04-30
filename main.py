@@ -9,7 +9,7 @@ current_version = 0.888
 import openai
 import logging
 import FijiTwitterBot
-from court_schitzo import start_court  # Assuming court.py contains a start_court function
+# from court_schitzo import start_court  # Assuming court.py contains a start_court function
 import time
 import requests
 import threading
