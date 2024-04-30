@@ -279,7 +279,7 @@ async def done_command(update, context):
 
         await send_bot_message(judge_bot, update.message.chat_id, "Thank you for your evidence. The court will now deliberate.")
         user_evidence = context.chat_data['user_evidence']
-        judge_prompt = f"The Plaintiff has presented his evidence : {user_evidence}. Introduce the court session and summarize the details of the evidence to the audience and the Plantiffs Lawyers and Defendant and the Jurors. Try to keep it brief to 150 words or less."
+        judge_prompt = f"The Plaintiff has presented their evidence : {user_evidence}. Introduce the court session and summarize the details of the evidence to the audience and the Plantiffs Lawyers and Defendant and the Jurors. Try to keep it brief to 150 words or less."
         judge_summary = generate_response(ai_model_judge,judge_system,judge_prompt)
         await send_bot_message(judge_bot, update.message.chat_id, judge_summary)
         judge_remarks.append(judge_summary)
@@ -315,7 +315,7 @@ async def opening_arguments(context,chat_id,judge_summary):
     user_testimonmey = context.chat_data['user_testimony']
     while True:
         # Generate the prompt
-      plaintiff_prompt = f"Using the Plaintiffs claim: {user_testimonmey} and the summary from the judge: {judge_summary}\n Act as the Plaintiff's attorney, and present an opening argument in defense of the Plaintiff's claim. Try to respond with 150 words or less."
+      plaintiff_prompt = f"Using the Plaintiffs claim: {user_testimonmey} and the summary from the judge: {judge_summary} prepare an opening argument in defense of your clients claim. Try to limit your response to 150 words."
 
       # Generate the response
       plaintiff_summary = generate_response(ai_model_plaintiff, plaintiff_system, plaintiff_prompt)
@@ -354,7 +354,7 @@ async def closing_arguments(context,chat_id):
    #await asyncio.sleep(20) 
     while True:
         # Generate the prompt
-        plaintiff_prompt = f"Using the new evidence from the Plaintiff aka your Client: {user_evidence} and the history of the court case: {court_document} as the Plaintiff's attorney, rebut the defendant's argument using critically thinking and remembering to cite and include the new evidence from your client to create a closing statement advocating the Plaintiff's case. Try to limit your response to 150 words."
+        plaintiff_prompt = f"Using the new evidence from the Plaintiff aka your Client: {user_evidence} and the past remarks: {court_document} form a succient and clear rebuttal to the defendant's argument using critical thinking and remembering to cite and include the new evidence from your client to create a closing statement advocating the Plaintiff's case. Try to limit your response to 150 words."
         
         # Generate the response
         plaintiff_summary = generate_response(ai_model_plaintiff, plaintiff_system, plaintiff_prompt)
