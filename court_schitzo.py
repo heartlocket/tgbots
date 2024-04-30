@@ -158,7 +158,7 @@ def generate_response(model, system, prompt, max_retries=5):
                       {"role": "system", "content": system},
                       {"role": "user", "content": prompt}
                   ],
-                  temperature=0.888,
+                  temperature=0.777,
               )
              return response.choices[0].message.content.strip()
 
