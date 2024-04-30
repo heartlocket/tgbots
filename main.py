@@ -64,7 +64,7 @@ print("I AM ALIVE... STARTING...")
 openai.api_key = os.getenv('OPENAI_API_KEY_JF')
 
 # Load the environment variables
-load_dotenv()
+load_dotenv() 
 
 
 
@@ -135,7 +135,15 @@ message_stack = []
 ai_model_Nico_OG= "ft:gpt-3.5-turbo-0613:corporate-global::8OfTDhQW"
 
 # datav3 current working : "ft:gpt-3.5-turbo-1106:fdasho:wtftwo:9CHQl6ra"
-ai_model = "ft:gpt-3.5-turbo-0613:fdasho:againagain:9CKJ4Vux"
+# ai_model = "ft:gpt-3.5-turbo-0613:fdasho:againagain:9CKJ4Vux"
+
+
+#mid cute
+ai_model = "ft:gpt-3.5-turbo-0613:fdasho:cv-113-mid:9Jg1N2Ee"
+
+#high c?elite
+#ai_model = "ft:gpt-3.5-turbo-1106:fdasho:cv-113:9JfzGLfI"
+
 
 # ai_model = "ft:gpt-3.5-turbo-1106:fdasho:wtftwo:9CHQl6ra"
 
