@@ -369,6 +369,7 @@ async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await context.bot.send_message(chat_id=channel_post.chat.id, text=channel_post.text)
 
 # function to decide whether to comment, hacky now, need to learn best practices for this
+
 async def tweet():
     global nft_ctr
     global global_context
@@ -382,47 +383,41 @@ async def tweet():
         await asyncio.sleep(10)  # Short pause to prevent spamming the log too quickly
         return False
     
-    success = False
+    try:
+        print(nft_ctr)
+        print("Trying to tweet...")
+        if nft_ctr % 5 == 0:
+            print("Tweeting NFT")
+            tweet_id = FijiTwitterBot.generate_NFT_tweet()
+            tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
+            await context.bot.send_message(chat_id=chat_id, text=tweet_link)
+            print(f"Tweeted NFT: {tweet_id}")
+        else:
+            tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
+            tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
+            await context.bot.send_message(chat_id=chat_id, text=tweet_link)
+            print("Message sent to Telegram")
 
-    #print(f"global_context: {global_context}")
-    #print(f"global_chat_id: {global_chat_id}")
-
-    while not success:
-        try:
-            print (nft_ctr)
-            print("Trying to tweet...")
-            if (nft_ctr % 5 == 0):
-                print ("Tweeting NFT")
-                tweet_id = FijiTwitterBot.generate_NFT_tweet()
-                tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
-                await context.bot.send_message(chat_id=chat_id, text=tweet_link)
-                print(f"Tweeted NFT: {tweet_id}")
-                
-            else:
-                tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
-                tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
-                await context.bot.send_message(chat_id=chat_id, text=tweet_link)
-                print("Message sent to Telegram")
-                
-
-            success = True
-            nft_ctr += 1
-        except Exception as e:
-            print(f"Error: {e}")
-            await asyncio.sleep(3)
-
+        nft_ctr += 1
+        return True  # Tweet successful
+    except Exception as e:
+        print(f"Error: {e}")
+        return False  # Exit after first failure without retrying
 
 async def tweet_loop():
     while True:
         print("Starting tweet loop.. active")
-        await tweet()
-        await asyncio.sleep(60 * 60 * 6)
+        tweeted = await tweet()
+        if tweeted:
+            print("Tweet successful, sleeping for 6 hours.")
+        else:
+            print("Tweet failed, sleeping for 6 hours.")
+        await asyncio.sleep(60 * 60 * 6)  # Sleep for 6 hours regardless of success or failure
 
 def run_tweet_loop():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(tweet_loop())
-    pass
         
 async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
