@@ -198,7 +198,7 @@ def generate_image(input_prompt):
         except openai.BadRequestError as e:
             print(f"Attempt {attempts + 1}: Failed due to content policy violation. Error: {e}")
             attempts += 1
-            if attempts == 5:
+            if attempts == 3:
                 # Modify the prompt to be safer after 5 failed attempts
                 print("Modifying the prompt to comply with content policies.")
                 safer_prompt = input_prompt + " Please generate an image that is very safe and adheres to content guidelines."
