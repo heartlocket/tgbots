@@ -416,11 +416,8 @@ async def tweet():
 async def tweet_loop():
     while True:
         print("Starting tweet loop.. active")
-        tweeted = await tweet()
-        if tweeted:
-            print("Tweet successful, entering sleep mode for 2 hours.")
-            await asyncio.sleep(60 * 60* 2)  # Sleep for 2 hours
-
+        await tweet()
+        await asyncio.sleep(60 * 60 * 6)
 
 def run_tweet_loop():
     loop = asyncio.new_event_loop()
