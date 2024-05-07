@@ -184,14 +184,14 @@ def generate_image_prompt(input):
         {"role": "system", "content": large_prompt_1_5},
         {"role": "user", "content": prompt}
     ],
-    max_tokens=500)
+    max_tokens=250)
     return response.choices[0].message.content.strip()
 
 
 # Generates an image based on the input prompt, outputs the url of the image
 def generate_image(input_prompt):
     attempts = 0
-    while attempts < 5:
+    while attempts < 3:
         try:
             response = openai_client.images.generate(prompt=input_prompt, n=1, size="1024x1024", model="dall-e-3")
             return response.data[0].url
