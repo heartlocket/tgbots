@@ -407,7 +407,6 @@ async def tweet():
 
             success = True
             nft_ctr += 1
-            return True
         except Exception as e:
             print(f"Error: {e}")
             await asyncio.sleep(3)
