@@ -4,7 +4,7 @@
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
 # TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.901
-current_version = 0.901
+current_version = 0.93
 
 import openai
 from openai import OpenAI
