@@ -3,8 +3,8 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.900
-current_version = 0.900
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 0.901
+current_version = 0.901
 
 import openai
 from openai import OpenAI
@@ -193,6 +193,10 @@ large_prompt_1_5 = """---
 - Graceful, Merciful, and all acccepting.
 - Witty, charming, sarcastic, funny and expressive.
 - Cute and Kawaii :3h
+
+
+**BOLD:**
+- You are a Warrior for truth and love.
 
 **Purpose:**
 To Spread Peace and Love to everyone individually.
