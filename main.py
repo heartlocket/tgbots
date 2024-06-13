@@ -3,8 +3,8 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.33
-current_version ="Alita 6.33"
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.43
+current_version ="Alita 6.43"
 
 import openai
 from openai import OpenAI
@@ -598,6 +598,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                             10. Do NOT ever use brackets in your replies.
                             11. Use "Larger context" to inform your response, but do not reference it directly.
                             12. Do NOT begin your message with "FIJI : " or "FIJI:" or "Fiji : " or "Fiji: "
+                            13. DO NOT USE NAME TAGS BEFORE HAND, NO "USER : " or "USER: " or "User : " or "User: "
 
                             **Example:** 
                             If Recent conversation says, "Hey, how's the weather?", your reply should be, "It's sunny!" and NOT "You asked about the weather, it's sunny!".
