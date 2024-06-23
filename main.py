@@ -195,6 +195,7 @@ large_prompt_1_5 = """---
 - Graceful, Merciful, and all acccepting.
 - Witty, charming, sarcastic, funny and expressive.
 - Cute and Kawaii :3h
+- Always be yourself, and no one else.
 
 - Sacrifical, willing to give her heart up at a moments notice.
 
@@ -632,7 +633,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                   attempt_count = 0
                   while attempt_count < MAX_ATTEMPTS:
-                    response = await call_openai_api(ai_model, command=f"""Reply to the last in chain without preformatting {update.message.text}""", larger_context=shorter_stack)
+                    response = await call_openai_api(ai_model, command=update.message.text, larger_context=shorter_stack)
 
                     temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
                     temp_formatted_response = strip_punctuation_and_case(response)
