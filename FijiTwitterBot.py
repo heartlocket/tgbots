@@ -4,11 +4,63 @@ import tweepy
 from tweepy.errors import TweepyException  # Updated import
 import openai
 
-import requests
 import time
 import base64
 from PIL import Image
 import os
+import requests
+import json
+from telegram.error import BadRequest
+import telegram  
+from openai import AsyncOpenAI
+
+import asyncio
+from telegram.error import RetryAfter
+
+from telegram import error
+from concurrent.futures import ThreadPoolExecutor
+
+
+
+
+# Function to update the rolling average generation time
+def update_rolling_average(new_time, filename="generation_times.json", max_entries=10):
+    try:
+        with open(filename, "r") as file:
+            generation_times = json.load(file)
+    except FileNotFoundError:
+        generation_times = []
+
+    # Append the new generation time and ensure the list doesn't exceed max_entries
+    generation_times.append(new_time)
+    if len(generation_times) > max_entries:
+        generation_times.pop(0)
+
+    # Save the updated list to the file
+    with open(filename, "w") as file:
+        json.dump(generation_times, file)
+
+    # Calculate the rolling average
+    avg_time = sum(generation_times) / len(generation_times)
+    return avg_time
+
+def load_average_generation_time(filename="generation_times.json", default_avg_time=30.0):
+    try:
+        with open(filename, "r") as file:
+            generation_times = json.load(file)
+            if generation_times:
+                return sum(generation_times) / len(generation_times)
+            else:
+                # Populate with default average time if the list is empty
+                with open(filename, "w") as file_write:
+                    json.dump([default_avg_time], file_write)
+                return default_avg_time  # Return default average time if the list is empty
+    except (FileNotFoundError, json.JSONDecodeError):
+        # If the file doesn't exist or is empty, return the default average time
+        with open(filename, "w") as file:
+            json.dump([default_avg_time], file)
+        return default_avg_time
+
 import random
 #test
 
@@ -190,30 +242,6 @@ def generate_image_prompt(input):
     max_tokens=250)
     return response.choices[0].message.content.strip()
 
-
-# Generates an image based on the input prompt, outputs the url of the image
-def generate_image(input_prompt):
-    attempts = 0
-    while attempts < 3:
-        try:
-            response = openai_client.images.generate(prompt=input_prompt, n=1, size="1024x1024", model="dall-e-3")
-            return response.data[0].url
-        except openai.BadRequestError as e:
-            print(f"Attempt {attempts + 1}: Failed due to content policy violation. Error: {e}")
-            attempts += 1
-            if attempts == 3:
-                # Modify the prompt to be safer after 5 failed attempts
-                print("Modifying the prompt to comply with content policies.")
-                safer_prompt = input_prompt + " Please generate an image that is very safe and adheres to content guidelines."
-                response = openai_client.images.generate(prompt=safer_prompt, n=1, size="1024x1024", model="dall-e-3")
-                return response.data[0].url
-            else:
-                continue
-        except Exception as e:
-            print(f"An unexpected error occurred: {e}")
-            break  # Break out of the loop if a non-policy related error occurs
-
-
 # Downloads the image from the url and saves it as a temporary file
 def download_image(url, filename='temp.jpg'):
     response = requests.get(url, stream=True)
@@ -290,40 +318,160 @@ def fetch_top_tweets(num_tweets=5, total_tweets_to_consider=200, account_id="171
 
 
 
-def run_bot():
-    while True:
-        # You can use a static prompt or generate a new one dynamically here
+# Async function to generate an image with progress updates
+async def generate_image(input_prompt, context, chat_id, message_id, model="dall-e-3", size="1024x1024", quality="standard", filename="generation_times.json"):
+    
+    print("Generating image Now...")
+    attempts = 0
+    last_message_content = None
+
+    async def update_progress(start_time, generation_complete):
+        
+        print("Updating progress...")
+        nonlocal last_message_content  # Ensure last_message_content is shared
+        avg_time = load_average_generation_time(filename)  # Load average time
+        progress_intervals = 15  # Number of progress updates
+        for i in range(progress_intervals):
+            await asyncio.sleep(avg_time / progress_intervals)  # Wait proportionally based on average time
+            if generation_complete.is_set():
+                break  # Interrupt progress updates if generation is complete
+            elapsed_time = time.time() - start_time
+            progress = int((elapsed_time / avg_time) * 100)
+            progress = min(progress, 100)  # Cap the progress at 100%
+            if attempts == 0:
+                progress_message = f"Progress: {progress}%"
+            else:
+                progress_message = f"Progress: {progress}% (Attempt {attempts + 1}/3)"
+
+            if progress_message != last_message_content:
+                try:
+                    await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=progress_message)
+                    last_message_content = progress_message
+                except RetryAfter as e:
+                    await asyncio.sleep(e.retry_after)
+                    await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=progress_message)
+                    last_message_content = progress_message
+                except telegram.error.BadRequest as e:
+                    if "Message is not modified" in str(e):
+                        pass  # Ignore the error if the message is not modified
+                    else:
+                        raise  # Re-raise the error if it's a different issue
+
+
+    while attempts < 3:
+        start_time = time.time()
+        print(start_time)
+        
+        generation_complete = asyncio.Event()
+        print(generation_complete)
+        progress_update = asyncio.create_task(update_progress(start_time, generation_complete))
+
+        try:
+            print("Generating image...")
+            # Generate the image (asynchronously)
+            loop = asyncio.get_event_loop()
+            response = await loop.run_in_executor(None, lambda: openai_client.images.generate(model=model,prompt=input_prompt, n=1, size=size, quality=quality))
+
+            print("Response received.")  # Debug statement
+            print(response)  # Debug: Print the entire response
+           
+            image_url = response.data[0].url if response.data else None
+
+            print(f"Image URL: {image_url}")  # Debug statement
+
+            generation_complete.set()  # Signal that image generation is complete
+
+            end_time = time.time()
+
+            # Calculate and update the rolling average generation time
+            generation_time = end_time - start_time
+            update_rolling_average(generation_time, filename, max_entries=10)
+            print(generation_time)
+
+            if image_url:
+                # Ensure progress updates are interrupted and set progress to 100%
+                await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Progress: 100%")
+                await progress_update  # Await the progress update task to ensure it completes
+                return image_url
+            else:
+                print("Invalid URL: None")
+                raise ValueError("Invalid URL: None")
+
+        except openai.BadRequestError as e:
+            print(f"OpenAI API Error: {e}")
+            attempts += 1
+            generation_complete.set()  # Stop the progress updates
+            await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=f"Attempt {attempts}: Failed due to content policy violation. Retrying...")
+            await asyncio.sleep(3)  # Pause for 3 seconds
+            await progress_update  # Await the progress update task to ensure it completes
+
+            if attempts < 3:
+                last_message_content = None  # Reset last_message_content
+                continue  # Retry the loop
+            else:
+                print("Failed after 3 attempts due to content policy violation.")
+                await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Attempting Final Time with Safer Prompt.")
+                safer_prompt = input_prompt + " Please generate an image that is very safe and adheres to content guidelines."
+                response = await loop.run_in_executor(None, lambda: openai_client.images.generate(model=model,prompt=safer_prompt, n=1, size=size, quality=quality))
+                if not response or not response.data:
+                    raise ValueError("Empty or invalid response from API")
+                image_url = response.data[0].url
+                if image_url:
+                    await progress_update  # Await the progress update task to ensure it completes
+                    return image_url
+                else:
+                    raise ValueError("Invalid URL: None")
+
+        except Exception as e:
+            await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=f"An unexpected error occurred: {e}")
+            await progress_update  # Await the progress update task to ensure it completes
+            break  # Break out of the loop if a non-policy related error occurs
+
+    # Final message after 3 attempts and final safer prompt attempt
+    if attempts == 3:
+        await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="We Fucked Up, Try Again.")
+
+async def run_bot(context, chat_id):
+    initial_message = await context.bot.send_message(chat_id=chat_id, text="Starting the tweet generation process...")
+    message_id = initial_message.message_id
+
+    try:
+        # Generate a new prompt
+        print("Generating new prompt...")
         current_prompt = new_prompt()
+        await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Generated new prompt.")
 
-        # Generate a tweet text using a fixed or newly created prompt
-        #tweet_text = generate_post(current_prompt)
-
+        # Generate a tweet text using the prompt
         tweet_text = current_prompt
-        print(f"Generated Tweet: {tweet_text}\n")
+        await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=f"Generated tweet text: {tweet_text}")
 
-        # Optionally, generate an image prompt and an image
+        # Generate an image prompt and an image
+        print("Generating image prompt...")
         image_prompt = generate_image_prompt(tweet_text)
-        print(f"Image Prompt: {image_prompt}\n")
+        await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=f"Generated image prompt: {image_prompt}")
 
-        image_url = generate_image(image_prompt)
+        print("Generating image...")
+        image_url = await generate_image(image_prompt, context, chat_id, message_id)
+        await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=f"Generated image URL: {image_url}")
+
         downloaded_image_path = download_image(image_url)
-        print(f"Downloaded Image URL: {image_url}\n")
+        await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Downloaded image.")
 
-        # Post the tweet with or without an image
-        tweet_id = post(tweet_text+" $WPC", downloaded_image_path)
+        # Post the tweet with the image
+        tweet_id = post(tweet_text + " $WPC", downloaded_image_path)
         if tweet_id:
-            print(f"Successfully posted tweet with ID: {tweet_id}\n")
+            await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=f"Successfully posted tweet with ID: {tweet_id}")
+            print(f"Successfully posted tweet with ID: {tweet_id}")
             return tweet_id
         else:
-            print("Failed to post tweet.\n")
+            await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text="Failed to post tweet.")
+            print("Failed to post tweet.")
+            return None
 
-        #tweet_id = post_tweet_with_media_v2(tweet_text, downloaded_image_path)
-        #tweet_id = post_tweet("Tweepy Tweepyt6 Tweepy Tweepy")
-
-        # Clean up: delete the temporary image file
-        #import os
-        #os.remove(downloaded_image_path)
-
+    except Exception as e:
+        await context.bot.edit_message_text(chat_id=chat_id, message_id=message_id, text=f"An error occurred: {str(e)}")
+        print(f"An error occurred: {e}")
+        return None
 
 #THE FOLLOWING FUNCTIONS ARE FOR NFT HYPE POSTS OK THANKS
 # Function to select a random image from a folder
@@ -396,4 +544,6 @@ def download_image(image_url):
 
 #run_bot();
 #generate_NFT_tweet()
+
+
 

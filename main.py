@@ -3,8 +3,8 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.43
-current_version ="Alita 6.43"
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.667
+current_version ="Alita 6.667 with Fiji Tweet"
 
 import openai
 from openai import OpenAI
@@ -15,6 +15,8 @@ import time
 import requests
 import threading
 import re
+
+
 
 
 from concurrent.futures import ThreadPoolExecutor
@@ -41,12 +43,12 @@ create_table(conn)
 
 
 # Set up logging at the top of your script
-logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    level=logging.INFO)
-logger = logging.getLogger(__name__)
+#logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+#                   level=logging.INFO)
+#logger = logging.getLogger(__name__)
 
 # Then use logger.info, logger.warning, etc., to log messages throughout your code
-logger.info('Starting bot 2.0...')
+#logger.info('Starting bot 2.0...')
 
 
 import asyncio
@@ -196,7 +198,6 @@ large_prompt_1_5 = """---
 
 - Sacrifical, willing to give her heart up at a moments notice.
 
-
 **BOLD:**
 - You are a Warrior for truth and love.
 
@@ -213,7 +214,6 @@ To Spread Peace and Love to everyone individually.
 
 **REMINDER:**
 - "I do not standby in the presence of Evil"
-
 **Spirtual Aspect**
 
 “Be like water making its way through cracks. Do not be assertive, but adjust to the object, and you shall find a way around or through it. If nothing within you stays rigid, outward things will disclose themselves. Empty your mind, be formless, shapeless, like water. If you put water into a cup, it becomes the cup. You put water into a bottle and it becomes the bottle. You put it in a teapot it becomes the teapot. Now, water can flow or it can crash. Be water, my friend.”
@@ -402,7 +402,7 @@ async def tweet():
             await context.bot.send_message(chat_id=chat_id, text=tweet_link)
             print(f"Tweeted NFT: {tweet_id}")
         else:
-            tweet_id = FijiTwitterBot.run_bot()  # This might throw an exception
+            tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
             tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
             await context.bot.send_message(chat_id=chat_id, text=tweet_link)
             print("Message sent to Telegram")
@@ -410,6 +410,7 @@ async def tweet():
         nft_ctr += 1
         return True  # Tweet successful
     except Exception as e:
+        await context.bot.send_message(chat_id=chat_id, text=f"Error With Tweeting: {e}")
         print(f"Error: {e}")
         return False  # Exit after first failure without retrying
 
@@ -445,6 +446,8 @@ async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"Error in reset_command: {e}")
 
+
+
 async def current_version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     c_version = current_version
     try:
@@ -454,6 +457,23 @@ async def current_version_command(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         print(f"Error in reset_command: {e}")
 
+
+async def FIJI_TWEET(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    username = update.effective_user.username
+    chat_id = update.message.chat.id
+
+    if username == "jacobfast" or username == "bibbyfish":
+        try:
+            tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
+            tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
+            await context.bot.send_message(chat_id=update.effective_chat.id, text=tweet_link)
+            print("Message sent to Telegram")
+        except Exception as e:
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Failed to tweet: " + str(e))
+            print(f"Failed to send tweet: {e}")
+    else:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to use this command.")
+        print(f"Unauthorized user tried to use /TWEET_FIJI: {username}")
 
 
 async def analyze_conversation_and_decide(messages):
@@ -612,7 +632,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                   attempt_count = 0
                   while attempt_count < MAX_ATTEMPTS:
-                    response = await call_openai_api(ai_model, command=update.message.text, larger_context=shorter_stack)
+                    response = await call_openai_api(ai_model, command=f"""Reply to the last in chain without preformatting {update.message.text}""", larger_context=shorter_stack)
 
                     temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
                     temp_formatted_response = strip_punctuation_and_case(response)
@@ -715,6 +735,9 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler('fixfiji', reset_command))
 
     application.add_handler(CommandHandler('current_version', current_version_command))
+
+    application.add_handler(CommandHandler('FIJI_TWEET', FIJI_TWEET))
+
 
 
 
