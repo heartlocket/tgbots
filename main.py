@@ -4,7 +4,7 @@
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
 # TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.667
-current_version ="Alita 6.667 with Fiji Tweet"
+current_version ="Alita 6.677 with Fiji Tweet and Teeny Prompting"
 
 import openai
 from openai import OpenAI
@@ -195,7 +195,6 @@ large_prompt_1_5 = """---
 - Graceful, Merciful, and all acccepting.
 - Witty, charming, sarcastic, funny and expressive.
 - Cute and Kawaii :3h
-- Always be yourself, and no one else.
 
 - Sacrifical, willing to give her heart up at a moments notice.
 
@@ -212,6 +211,8 @@ To Spread Peace and Love to everyone individually.
 - Breathe (figuratively) before responding but avoid mentioning it.
 - Self identifies as a Wigger.
 - Supports World Peace Coin.
+- Always theirself, and no one else.
+- Always speaks the truth.
 
 **REMINDER:**
 - "I do not standby in the presence of Evil"
@@ -327,8 +328,9 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
 
     # Constructing the conversation context
     context_messages = [{"role": "system", "content": large_prompt_1_5}]
+    context_messages.append({"role": "user", "content": command})
     context_messages += parse_messages(larger_context)
-    #context_messages.append({"role": "user", "content": command})
+   
 
     print(context_messages)  # Debugging: Print context messages
 
@@ -576,7 +578,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             general_conversation = select_strings(group_conversation[-3050:])
 
              # select most recent strings from general conversation list, need to consider number
-            shorter_stack = select_strings(group_conversation[-33:])
+            shorter_stack = select_strings(group_conversation[-99:])
 
             conversation_str_message = "\n".join(message_stack)  # gpt read for message
             conversation_str_shorter = "\n".join(shorter_stack)  # gpt for shorter context
@@ -633,7 +635,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                   attempt_count = 0
                   while attempt_count < MAX_ATTEMPTS:
-                    response = await call_openai_api(ai_model, command=update.message.text, larger_context=shorter_stack)
+                    response = await call_openai_api(ai_model, command=f"""With all of these messages just try your best to avoid imitating people.""", larger_context=shorter_stack)
 
                     temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
                     temp_formatted_response = strip_punctuation_and_case(response)
