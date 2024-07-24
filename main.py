@@ -390,19 +390,20 @@ async def tweet():
     chat_id = global_chat_id
 
     if not global_context:
-        print("Context not available yet")
+        await context.bot.send_message(chat_id=chat_id, text=f"Context loading...")
         await asyncio.sleep(10)  # Short pause to prevent spamming the log too quickly
         return False
     
     try:
+        await context.bot.send_message(chat_id=chat_id, text=f"Trying to Tweet....: {e}")
         print(nft_ctr)
         print("Trying to tweet...")
         if nft_ctr % 5 == 0:
-            print("Tweeting NFT")
-            tweet_id = FijiTwitterBot.generate_NFT_tweet()
+            tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
             tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
             await context.bot.send_message(chat_id=chat_id, text=tweet_link)
-            print(f"Tweeted NFT: {tweet_id}")
+            print("Message sent to Telegram")
+
         else:
             tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
             tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
@@ -424,7 +425,7 @@ async def tweet_loop():
             print("Tweet successful, sleeping for 6 hours.")
         else:
             print("Tweet failed, sleeping for 6 hours.")
-        await asyncio.sleep(60 * 60 * 6)  # Sleep for 6 hours regardless of success or failure
+        await asyncio.sleep(1 * 1 * 1)  # Sleep for 6 hours regardless of success or failure
 
 def run_tweet_loop():
     loop = asyncio.new_event_loop()
