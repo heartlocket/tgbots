@@ -6,3 +6,6 @@ telegram_chat.db
 _backuptelegram_chat.db
 venv/
 .venv/
+__pycache__/FijiTwitterBot.cpython-39.pyc
+__pycache__/db_handler.cpython-39.pyc
+.python-version
