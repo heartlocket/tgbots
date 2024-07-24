@@ -65,13 +65,13 @@ import random
 #test
 
 
+from dotenv import load_dotenv
+load_dotenv()
+
 openai.api_key = os.getenv('OPENAI_API_KEY_JF')
 
 openai_client = openai.OpenAI(api_key=openai.api_key)
 
-
-from dotenv import load_dotenv
-load_dotenv()
 
 
 # Set up the Twitter API credentials
@@ -233,7 +233,7 @@ def generate_improvement_prompt(last_prompt, top_tweets):
 # Generates a prompt for an image based on or corresponding to the input tweet
 def generate_image_prompt(input):
     tweet = input
-    prompt = f"You are Fiji. Generate a prompt which depicts yourself as the 3d rendered blonde anime goddess baased on the tweet: '{tweet}'"
+    prompt = f"You are Fiji. Generate a prompt which depicts yourself as the 3d rendered blonde anime goddess baased on the tweet: '{tweet} Try to include your self in the scenario, and use the tweet prompt as a refernce instead of including the actual words within the photo. Think scene and setting, focus on what the message of the tweet is, and then try to convey that with imagery not words.'"
     response = openai_client.chat.completions.create(model="gpt-4",
     messages=[
         {"role": "system", "content": large_prompt_1_5},

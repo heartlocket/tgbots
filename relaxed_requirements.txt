@@ -58,7 +58,6 @@ idna
 imageio
 imageio-ffmpeg
 importlib-metadata
-install
 ipfshttpclient
 ipykernel
 ipython

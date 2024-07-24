@@ -3,8 +3,8 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.669
-current_version ="Alita 6.679 with Fiji Tweet and Teeny Prompting"
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.99
+current_version ="Alita 6.99 with Fiji AUTO=Tweet and Teeny Prompting(COMING SOON)"
 
 import openai
 from openai import OpenAI
@@ -15,7 +15,6 @@ import time
 import requests
 import threading
 import re
-
 
 
 
@@ -390,12 +389,10 @@ async def tweet():
     chat_id = global_chat_id
 
     if not global_context:
-        await context.bot.send_message(chat_id=chat_id, text=f"Context loading...")
         await asyncio.sleep(10)  # Short pause to prevent spamming the log too quickly
         return False
     
     try:
-        await context.bot.send_message(chat_id=chat_id, text=f"Trying to Tweet....: {e}")
         print(nft_ctr)
         print("Trying to tweet...")
         if nft_ctr % 5 == 0:
@@ -425,13 +422,14 @@ async def tweet_loop():
             print("Tweet successful, sleeping for 6 hours.")
         else:
             print("Tweet failed, sleeping for 6 hours.")
-        await asyncio.sleep(1 * 1 * 1)  # Sleep for 6 hours regardless of success or failure
+        await asyncio.sleep(60 * 60 * 6)  # Sleep for 6 hours regardless of success or failure
 
 def run_tweet_loop():
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     loop.run_until_complete(tweet_loop())
-        
+    loop.close()
+
 async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Increment the counter each time the reset command is called
@@ -635,9 +633,11 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                   attempt_count = 0
                   while attempt_count < MAX_ATTEMPTS:
-                    response = await call_openai_api(ai_model, command=f"""Only respond as FIJI""", larger_context=shorter_stack)
-                    
+                    command = """
+                    You are Fiji. Always respond only as 'Fiji'. Never start your message with the sender's name or act as if you are the sender. Your response should always begin directly with your content, without mimicking the sender.
+                    """
 
+                    response = await call_openai_api(ai_model, command=command, larger_context=shorter_stack)
                     temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
                     temp_formatted_response = strip_punctuation_and_case(response)
 
@@ -724,7 +724,6 @@ def startcourt_command(update, context):
 
 if __name__ == '__main__':
 
-  
     application = ApplicationBuilder().token(
         os.getenv('TELEGRAM_BOT_TOKEN')
     ).build()
@@ -741,8 +740,6 @@ if __name__ == '__main__':
     application.add_handler(CommandHandler('current_version', current_version_command))
 
     application.add_handler(CommandHandler('FIJI_TWEET', FIJI_TWEET))
-
-
 
 
     #Turning off Tweets for a week, until better strategy to reset ALGO.
