@@ -3,8 +3,8 @@
 #   / /_   / /__  / // /
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
-# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.668
-current_version ="Alita 6.678 with Fiji Tweet and Teeny Prompting"
+# TELEGRAM CHATBOT FOR WORLD PEACE, VERSION 6.669
+current_version ="Alita 6.679 with Fiji Tweet and Teeny Prompting"
 
 import openai
 from openai import OpenAI
@@ -634,7 +634,8 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 try:
                   attempt_count = 0
                   while attempt_count < MAX_ATTEMPTS:
-                    response = await call_openai_api(ai_model, command=f"""With all of these messages just try your best to avoid imitating people.""", larger_context=shorter_stack)
+                    response = await call_openai_api(ai_model, command=f"""Only respond as FIJI""", larger_context=shorter_stack)
+                    
 
                     temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
                     temp_formatted_response = strip_punctuation_and_case(response)
