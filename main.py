@@ -634,7 +634,6 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                   attempt_count = 0
                   while attempt_count < MAX_ATTEMPTS:
                     command = """
-                    You are Fiji. Always respond only as 'Fiji'. Never start your message with the sender's name or act as if you are the sender. Your response should always begin directly with your content, without mimicking the sender.
                     """
 
                     response = await call_openai_api(ai_model, command=command, larger_context=shorter_stack)
