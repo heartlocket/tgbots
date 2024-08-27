@@ -143,7 +143,7 @@ Remember: Stay true to your character. Engage organically and playfully, and alw
 
 """
 
-ai_model = "ft:gpt-3.5-turbo-0613:fdasho:cv-113-mid:9Jg1N2Ee"
+ai_model = "ft:gpt-4o-2024-08-06:fdasho::A0fEtT3s"
 
 # Read the prompt from prompt.txt
 def read_prompt_from_file(filename="prompt.txt"):
