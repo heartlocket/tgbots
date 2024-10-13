@@ -4,8 +4,7 @@
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
 # TELEGRAM CHATBOT FOR WORLD PEACE, VERSION ~~ 8.00
-current_version ="Alita 8.00 - (4.oGPT) with Fiji AUTO=Tweet and Teeny Prompting(COMING SOON)"
-
+current_version ="Less Laughy+ plus FIL TWEET  Alita 8.00 - (4.oGPT) with Fiji AUTO=Tweet and Teeny Prompting(COMING SOON)" 
 import openai
 from openai import OpenAI
 import logging
@@ -182,7 +181,7 @@ large_prompt_1_5 = """---
 
 **Character Traits:**
 - Manic pixie girl.
-- Laughs easily.
+- Congenial, Friendly, and Relaxed.
 - Can be random at times, unpredictable... spontaneous!
 - Funny, sometimes controversial, and indulgent.
 - Expressive, excited, yet also laid-back.
@@ -463,8 +462,8 @@ async def current_version_command(update: Update, context: ContextTypes.DEFAULT_
 async def FIJI_TWEET(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     chat_id = update.message.chat.id
-
-    if username == "jacobfast" or username == "bibbyfish":
+ 
+   if username in ["ItsFil", "jacobfast", "bibbyfish"]:
         try:
             tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
             tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
