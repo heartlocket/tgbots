@@ -4,7 +4,7 @@
 #  / __/ _/ // /_/ // /
 # /_/   /___/\____/___/
 # TELEGRAM CHATBOT FOR WORLD PEACE, VERSION ~~ 8.00
-current_version ="Less Laughy+ plus FIL TWEET  Alita 8.00 - (4.oGPT) with Fiji AUTO=Tweet and Teeny Prompting(COMING SOON)" 
+current_version = " CURRENT MODEL   ____Less Laughy+ plus FIL TWEET  Alita 8.00 - (4.oGPT) with Fiji AUTO=Tweet and Teeny Prompting(COMING SOON)" 
 import openai
 from openai import OpenAI
 import logging
