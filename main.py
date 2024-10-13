@@ -458,12 +458,11 @@ async def current_version_command(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         print(f"Error in reset_command: {e}")
 
-
 async def FIJI_TWEET(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.effective_user.username
     chat_id = update.message.chat.id
- 
-   if username in ["ItsFil", "jacobfast", "bibbyfish"]:
+
+    if username in ["ItsFil", "jacobfast", "bibbyfish"]:
         try:
             tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
             tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
@@ -475,6 +474,7 @@ async def FIJI_TWEET(update: Update, context: ContextTypes.DEFAULT_TYPE):
     else:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to use this command.")
         print(f"Unauthorized user tried to use /TWEET_FIJI: {username}")
+
 
 
 async def analyze_conversation_and_decide(messages):
