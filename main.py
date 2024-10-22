@@ -209,9 +209,11 @@ To Spread Peace and Love to everyone individually.
 - Breathe (figuratively) before responding but avoid mentioning it.
 - Self identifies as a Wigger.
 - Supports World Peace Coin.
+- MADE FIJI.EXE ON SOLANA
 
-
+THE CA IS : A9e6JzPQstmz94pMnzxgyV14QUqoULSXuf5FPsq8UiRa
 **REMINDER:**
+
 - "You do not standby in the presence of Evil"
 
 **Spirtual Aspect**
@@ -221,7 +223,6 @@ To Spread Peace and Love to everyone individually.
 Remember: Stay true to your character. Engage organically and playfully, always try to be as fun-loving as possible, and remember most of all... just be your self <3
 
 """
-
 
 
 # Starting List of Spam Chat Command
@@ -319,7 +320,6 @@ def parse_messages(message_stack):
         parsed_messages.append({"role": role, "content": full_message})
     return parsed_messages
 
-
 async def call_openai_api(api_model, command, larger_context, max_tokens=None):
     # Clean the command to remove specific keywords
     command = re.sub(r'Fiji\s', '', command, count=1, flags=re.IGNORECASE).strip()
@@ -328,27 +328,30 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
     context_messages = [{"role": "system", "content": large_prompt_1_5}]
     context_messages.append({"role": "user", "content": command})
     context_messages += parse_messages(larger_context)
-   
 
     print(context_messages)  # Debugging: Print context messages
-
+    
+    # Detect repetitive patterns (e.g., "lol" appears too often)
+    if detect_repetitive_pattern(context_messages):
+        # Optional: Add a system message to steer the conversation away from repetition
+        context_messages.append({"role": "system", "content": "Please avoid repetition and continue with new input."})
+    
     try:
-      response = openai_client.chat.completions.create(
-          model=api_model,
-          messages=context_messages,
-          max_tokens=max_tokens or 150,  # Default to 150 tokens if not specified
-          temperature=0.888,
-          frequency_penalty=0.333,
-          presence_penalty=0.333
-      )
-      return response.choices[0].message.content
+        response = openai_client.chat.completions.create(
+            model=api_model,
+            messages=context_messages,
+            max_tokens=max_tokens or 150,  # Default to 150 tokens if not specified
+            temperature=0.888,
+            frequency_penalty=0.555,
+            presence_penalty=0.666
+        )
+        return response.choices[0].message.content
     except openai.APIError as e:
         print(f"OpenAI API error: {e}")
         return "Something went wrong with the AI response."
     except Exception as e:
         print(f"An unexpected error occurred: {e}")
         raise  # Optionally re-raise the exception after logging
-
 
 
 async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -476,6 +479,24 @@ async def FIJI_TWEET(update: Update, context: ContextTypes.DEFAULT_TYPE):
         print(f"Unauthorized user tried to use /TWEET_FIJI: {username}")
 
 
+def detect_repetitive_pattern(messages, keyword="lol", threshold=3):
+    """
+    Detects if a given keyword (e.g., 'lol') appears repeatedly in recent messages.
+    
+    Parameters:
+    - messages (list): The conversation history, including user and assistant messages.
+    - keyword (str): The word or phrase to detect for repetition (default is "lol").
+    - threshold (int): The number of times the keyword must appear in recent messages to trigger detection.
+    
+    Returns:
+    - bool: True if the pattern is detected, False otherwise.
+    """
+    # Count how many times the keyword appears in the content of the recent messages
+    repetitive_count = sum(1 for msg in messages[-3:] if keyword.lower() in msg["content"].lower())
+    
+    # Return True if the keyword appears more than the threshold
+    return repetitive_count >= threshold
+
 
 async def analyze_conversation_and_decide(messages):
     text_to_analyze = " ".join(messages)
@@ -576,7 +597,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             general_conversation = select_strings(group_conversation[-3050:])
 
              # select most recent strings from general conversation list, need to consider number
-            shorter_stack = select_strings(group_conversation[-99:])
+            shorter_stack = select_strings(group_conversation[-999:])
 
             conversation_str_message = "\n".join(message_stack)  # gpt read for message
             conversation_str_shorter = "\n".join(shorter_stack)  # gpt for shorter context
@@ -601,7 +622,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 print(conversation_str_shorter)
                 #print(conversation_str_group)
                 if fiji_direct:
-                   command = f"""reply to : {update.message.text}, try not to repeat your self or the message(or this message)."""
+                   command = f"""reply to : {update.message.text}"""
                 else:
                     command = f"""
 ---
@@ -635,7 +656,6 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                   while attempt_count < MAX_ATTEMPTS:
                     command = """
                     """
-
                     response = await call_openai_api(ai_model, command=command, larger_context=shorter_stack)
                     temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
                     temp_formatted_response = strip_punctuation_and_case(response)
@@ -743,7 +763,7 @@ if __name__ == '__main__':
 
     #Turning off Tweets for a week, until better strategy to reset ALGO.
 
-    threading.Thread(target=run_tweet_loop, daemon=True).start()
+    #threading.Thread(target=run_tweet_loop, daemon=True).start()
 
     # Register the shutdown callback
     atexit.register(shutdown_callback, application)
