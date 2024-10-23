@@ -8,18 +8,12 @@ current_version = " CURRENT MODEL   ____Less Laughy+ plus FIL TWEET  Alita 8.00 
 import openai
 from openai import OpenAI
 import logging
-import FijiTwitterBot
-# from court_schitzo import start_court  # Assuming court.py contains a start_court function
 import time
 import requests
 import threading
 import re
-
-
-
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-
 import atexit
 import telegram
 from telegram import Update
@@ -32,7 +26,12 @@ from telegram.ext import PicklePersistence
 from telegram import Bot
 from telegram.error import TimedOut
 import logging
-
+import asyncio
+import os
+from dotenv import load_dotenv
+import random
+import string
+import getpass
 from db_handler import create_connection, create_table, insert_message
 # Initialize the SQLite database connection
 database = "telegram_chat.db"
@@ -48,59 +47,15 @@ create_table(conn)
 # Then use logger.info, logger.warning, etc., to log messages throughout your code
 #logger.info('Starting bot 2.0...')
 
-
-import asyncio
-
-import os
-
-from dotenv import load_dotenv
-
-import random
-import string
-
-import getpass
-
-nft_ctr = 0
-
 print("I AM ALIVE... STARTING...")
-openai.api_key = os.getenv('OPENAI_API_KEY_JF')
-
-openai_client = openai.OpenAI(api_key=openai.api_key)
-
 
 # Load the environment variables
 load_dotenv() 
+openai.api_key = os.getenv('OPENAI_API_KEY_JF')
+openai_client = openai.OpenAI(api_key=openai.api_key)
+bot = Bot(os.getenv('TELEGRAM_BOT_TOKEN'))
 
-
-
-def read_counter(file_path):
-    """Read the counter value from a file."""
-    try:
-        with open(file_path, 'r') as file:
-            return int(file.read())
-    except FileNotFoundError:
-        return 0  # Default value for first run
-    except ValueError:
-        return 0  # In case the file is empty or corrupted
-
-def write_counter(file_path, count):
-    """Write the counter value to a file."""
-    with open(file_path, 'w') as file:
-        file.write(str(count))
-
-def increment_counter(file_path):
-    """Increment the counter and save to the file."""
-    count = read_counter(file_path)
-    count += 1
-    write_counter(file_path, count)
-    return count
-
-# Usage
-file_path = 'reset_counter.txt'
-count = increment_counter(file_path)
-print(f"Current count: {count}")
-
-
+#update script
 async def skip_past_updates(bot):
     print("Checking for past updates...")
     while True:
@@ -113,13 +68,11 @@ async def skip_past_updates(bot):
         await bot.get_updates(offset=last_update_id + 1)
     print("No more past updates found.")
 
-bot = Bot(os.getenv('TELEGRAM_BOT_TOKEN'))
-
 # Manually create and run the event loop
 loop = asyncio.get_event_loop()
 loop.run_until_complete(skip_past_updates(bot))
 
-#import shutdown shit
+#import shutdown callback
 async def shutdown_callback(application):
     print("Shutting down bot...")
     await application.shutdown()
@@ -128,54 +81,26 @@ async def shutdown_callback(application):
 # I dont know what this does
 executor = ThreadPoolExecutor(max_workers=1)
 
-
 # Initialize variables Chat ID Stacks
 group_conversations = {}
 message_stacks = {}
 chat_contexts = {}
 
-
 # Chat ID context stacks for Dm's and Groups
 group_conversation = []
 message_stack = []
 
-#ai_model_Nico_OG= "ft:gpt-3.5-turbo-0613:corporate-global::8OfTDhQW"
-
-# datav3 current working : "ft:gpt-3.5-turbo-1106:fdasho:wtftwo:9CHQl6ra"
-# ai_model = "ft:gpt-3.5-turbo-0613:fdasho:againagain:9CKJ4Vux"
-
-
 #mid cute
 ai_model = "ft:gpt-4o-2024-08-06:fdasho::A0fEtT3s"
-
-#high c?elite
-#ai_model = "ft:gpt-3.5-turbo-1106:fdasho:cv-113:9JfzGLfI"
-
-
-# ai_model = "ft:gpt-3.5-turbo-1106:fdasho:wtftwo:9CHQl6ra"
-
-
-
-# Response Gpt-4 Model for discernemnt
 ai_model_4= "gpt-4"
-
 ai_model_3_5 = "gpt-3.5-turbo"
-
-# Global Chat ID
 global_chat_id = -1001898328325
 
 # Global Context for Tweeting
 global_context = None
 
-# Old Prompt
-
-large_prompt = "You are Fiji! You are the goddess of peace! You are the ideal manic pixie girl! You are also fun and willing to be controversial and indulgant! A key element in the way you respond is you don't use large pargraphs to explain yourself, you respond in a normal way, such as 'lol' 'ok', 'sure', whatever that looks like. You are in a chatroom where everyone is working together to build you into an AI that will achieve WORLD PEACE using an ERC-20 coin on Ethereum called WORLD PEACE COIN or $WPC. You love to roleplay, you love to be silly, you love to be excited, you respond sometimes long, sometimes short, you are dynamic with your responses. Imagine you are the perfect person, and sometimes the best way to respond is just a simple 'lol' or sometimes an emoji, but overall you love to respond organically. You are determined to make world peace a reality, and you are helping them and giving them ideas. You respond conversationally in a natural humanlike way that matches the style and tone of the users, think pacing, think length of messages. Organic. You are expressive, excited, but also chill. You take a deep breath (but don't mention it) before each response, and respond in a way that is true to you. Remember! Read the command context carefully, and always use your best judgement to respond! Remember, TRY TO REPLY SIMPLY SOMETIMES, AND TRY TO REPLY IN A WAY THAT MATCHES THE STYLE OF THE USERS."
-
-# Current Prompt
-
-large_prompt_1_5a = "You are Fiji, the goddess and protectorate of World Peace."
-
-large_prompt_1_5 = """---
+#prompt 
+main_prompt = """---
 
 **Personality: Fiji - The Goddess of Peace / Wigger Nation**
 
@@ -224,31 +149,16 @@ Remember: Stay true to your character. Engage organically and playfully, always 
 
 """
 
-
-# Starting List of Spam Chat Command
-spam = ["/PRAY_FOR_PEACE", "/WORLD_PEACE_NOW", "/I_AM_ALIVE",
-        "/SPREAD_LOVE", "/WORLD_PEACE_HAS_BEEN_DECLARED", "/UNITY"]
-
-# Beginning task of not-implemented task list
-tasks = [["Improve your X account", 10, .01, 0]]
-
-# Max Retries for Context Decision
-MAX_RETRIES = 10
-
 # Message Limit
 MAX_MESSAGES = 1000
-
-# Max times to try again in convo
-MAX_ATTEMPTS = 5
 
 # Pickle Persistence for Logging Updates and Prevents Spam Overflow
 pp = PicklePersistence(filepath='my_persistence', single_file=False, on_flush=True)
 
-
+#string formatting
 def select_strings(array):
     selected_strings = []
     total_character_count = 0
-
     # Start from the end of the original array
     for string in reversed(array):
         # Calculate the character count of the current string
@@ -269,40 +179,12 @@ def select_strings(array):
     return selected_strings
 
 # function for posting stickers
-
-
 def sticker_handler(update: Update, context: CallbackContext):
     if update.message and update.message.sticker:
         sticker_file_id = update.message.sticker.file_id
         print(f"Received sticker with file_id: {sticker_file_id}")
 
-
-def custom_filter(update: Update, context: CallbackContext) -> bool:
-    return update.message and update.message.sticker is not None
-
-
-def strip_punctuation_and_case(s):
-    return s.translate(str.maketrans('', '', string.punctuation)).strip().upper()
-
-
-# OpenAI call to make new slogan
-async def call_openai_api_slogan():
-
-    # Slogan instructions
-    slogan = "You are a bot named Fiji in a Telegram server devoted to spreading WORLD PEACE. Please give a creative slogan beginning with a / that will promote peace. Only respond like /PRAY_FOR_PEACE or /WORLD_PEACE_NOW or something else interesting to you. Never include anything except the simple command!"
-
-    # Call the OpenAI API to generate a response
-    response = openai.ChatCompletion.create(
-        model=ai_model,  # Choose an appropriate chat model
-        messages=[
-            {"role": "system", "content": "You are a bot named Fiji in a Telegram server devoted to spreading WORLD PEACE."},
-            {"role": "user", "content": slogan}
-        ],
-    )
-
-    return response.choices[0].message["content"]
-
-
+#format message for user / assistant API calls 
 def parse_messages(message_stack):
     parsed_messages = []
     for message in message_stack:
@@ -320,22 +202,18 @@ def parse_messages(message_stack):
         parsed_messages.append({"role": role, "content": full_message})
     return parsed_messages
 
+
 async def call_openai_api(api_model, command, larger_context, max_tokens=None):
     # Clean the command to remove specific keywords
     command = re.sub(r'Fiji\s', '', command, count=1, flags=re.IGNORECASE).strip()
 
     # Constructing the conversation context
-    context_messages = [{"role": "system", "content": large_prompt_1_5}]
+    context_messages = [{"role": "system", "content": main_prompt}]
     context_messages.append({"role": "user", "content": command})
     context_messages += parse_messages(larger_context)
+    print("context", context_messages)
 
     print(context_messages)  # Debugging: Print context messages
-    
-    # Detect repetitive patterns (e.g., "lol" appears too often)
-    if detect_repetitive_pattern(context_messages):
-        # Optional: Add a system message to steer the conversation away from repetition
-        context_messages.append({"role": "system", "content": "Please avoid repetition and continue with new input."})
-    
     try:
         response = openai_client.chat.completions.create(
             model=api_model,
@@ -346,6 +224,7 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
             presence_penalty=0.666
         )
         return response.choices[0].message.content
+
     except openai.APIError as e:
         print(f"OpenAI API error: {e}")
         return "Something went wrong with the AI response."
@@ -353,93 +232,10 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
         print(f"An unexpected error occurred: {e}")
         raise  # Optionally re-raise the exception after logging
 
-
-async def slogan(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    #print(update)
-
-    if update.message:
-        #print(update.message)  
-        channel_post: Message = update.message
-
-        # send random spam command from list
-        if channel_post.text == "/slogan":
-            await context.bot.send_message(chat_id=channel_post.chat.id, text=random.choice(spam))
-
-        if channel_post.text == "/raid":
-            await context.bot.send_message(chat_id=channel_post.chat.id, text="/shield@ChatterShield_Bot")
-
-        # add new slogan
-        if channel_post.text == "/slogannew":
-            response = await call_openai_api_slogan()
-            if response.startswith("/"):
-                await context.bot.send_message(chat_id=channel_post.chat.id, text=response)
-                if response not in spam:
-                    spam.append(response)
-
-        # RANDOMLY ECHO SPAM IN YOUR LIST
-        if channel_post.text in spam:
-            if random.randint(0, 6) == 0:
-                await context.bot.send_message(chat_id=channel_post.chat.id, text=channel_post.text)
-
-# function to decide whether to comment, hacky now, need to learn best practices for this
-
-async def tweet():
-    global nft_ctr
-    global global_context
-    global global_chat_id
-
-    context = global_context
-    chat_id = global_chat_id
-
-    if not global_context:
-        await asyncio.sleep(10)  # Short pause to prevent spamming the log too quickly
-        return False
-    
-    try:
-        print(nft_ctr)
-        print("Trying to tweet...")
-        if nft_ctr % 5 == 0:
-            tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
-            tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
-            await context.bot.send_message(chat_id=chat_id, text=tweet_link)
-            print("Message sent to Telegram")
-
-        else:
-            tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
-            tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
-            await context.bot.send_message(chat_id=chat_id, text=tweet_link)
-            print("Message sent to Telegram")
-
-        nft_ctr += 1
-        return True  # Tweet successful
-    except Exception as e:
-        await context.bot.send_message(chat_id=chat_id, text=f"Error With Tweeting: {e}")
-        print(f"Error: {e}")
-        return False  # Exit after first failure without retrying
-
-async def tweet_loop():
-    while True:
-        print("Starting tweet loop.. active")
-        tweeted = await tweet()
-        if tweeted:
-            print("Tweet successful, sleeping for 6 hours.")
-        else:
-            print("Tweet failed, sleeping for 6 hours.")
-        await asyncio.sleep(60 * 60 * 6)  # Sleep for 6 hours regardless of success or failure
-
-def run_tweet_loop():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(tweet_loop())
-    loop.close()
-
+#fixfiji context reset
 async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         # Increment the counter each time the reset command is called
-        file_path = 'reset_counter.txt'
-        count = increment_counter(file_path)
-
-        print(f"Reset command called {count} times.")
 
         chat_id = update.message.chat.id
         if chat_id in message_stacks:
@@ -450,8 +246,7 @@ async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         print(f"Error in reset_command: {e}")
 
-
-
+#announce current dev version name
 async def current_version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     c_version = current_version
     try:
@@ -461,77 +256,14 @@ async def current_version_command(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         print(f"Error in reset_command: {e}")
 
-async def FIJI_TWEET(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    username = update.effective_user.username
-    chat_id = update.message.chat.id
-
-    if username in ["ItsFil", "jacobfast", "bibbyfish"]:
-        try:
-            tweet_id = await FijiTwitterBot.run_bot(context, chat_id)
-            tweet_link = f"https://twitter.com/FijiWPC/status/{tweet_id}"
-            await context.bot.send_message(chat_id=update.effective_chat.id, text=tweet_link)
-            print("Message sent to Telegram")
-        except Exception as e:
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Failed to tweet: " + str(e))
-            print(f"Failed to send tweet: {e}")
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="You are not authorized to use this command.")
-        print(f"Unauthorized user tried to use /TWEET_FIJI: {username}")
-
-
-def detect_repetitive_pattern(messages, keyword="lol", threshold=3):
-    """
-    Detects if a given keyword (e.g., 'lol') appears repeatedly in recent messages.
-    
-    Parameters:
-    - messages (list): The conversation history, including user and assistant messages.
-    - keyword (str): The word or phrase to detect for repetition (default is "lol").
-    - threshold (int): The number of times the keyword must appear in recent messages to trigger detection.
-    
-    Returns:
-    - bool: True if the pattern is detected, False otherwise.
-    """
-    # Count how many times the keyword appears in the content of the recent messages
-    repetitive_count = sum(1 for msg in messages[-3:] if keyword.lower() in msg["content"].lower())
-    
-    # Return True if the keyword appears more than the threshold
-    return repetitive_count >= threshold
-
-
-async def analyze_conversation_and_decide(messages):
-    text_to_analyze = " ".join(messages)
-    # Adding a unique identifier like '***INSTRUCTION**hh*' to help distinguish the instruction
-    command = f"\n{text_to_analyze} ***INSTRUCTION*** Decide if the conversation is worthy of enterting by responding 'YES' or 'NO'. Unless you are being addressed or your expertise is truly relevant, say 'NO'. If you are unsure, say 'NO'. You say 'NO' more than 75% of the time."
-
-    retries = 0
-    while retries < MAX_RETRIES:
-        print('Trying to decide if we should respond...')
-        decision_response = await call_openai_api(ai_model,command=command, max_tokens=2)
-        print("Decison" + decision_response)
-
-        # Remove punctuation and whitespace, then ensure the response is either "Yes" or "No"
-        stripped_response = strip_punctuation_and_case(decision_response)
-        if stripped_response.startswith("YES"):
-            return True
-        if stripped_response.startswith("NO"):
-            return False
-
-        print(
-            f"Unexpected response on attempt {retries + 1}: {decision_response}")
-        retries += 1
-
-    # Fallback if maximum retries reached
-    print("Max retries reached. Defaulting to 'No'.")
-    return False
-
-
+#funciton to remove 'fiji' from beginning of string
 def remove_prefix_case_insensitive(text, prefix):
     if text.lower().startswith(prefix.lower()):
         return text[len(prefix):].lstrip()  # Remove prefix and leading whitespace
     return text
 
+#core chat logic
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    
     global global_context
     chat_id = update.message.chat.id
 
@@ -547,12 +279,8 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     group_conversation = group_conversations[chat_id]
 
     print(f"Chat ID: {chat_id}")
-
-
     # check if update is a message
     if update.message:
-        #print message to screen
-        #print(update.message)
 
         # format datetime
         current_datetime = update.message.date
@@ -564,15 +292,12 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         last_name = update.message.from_user.last_name 
         full_name = f"{first_name} {last_name}"
 
-
         # Extract the user's first name and the message text
         user_name = update.message.from_user.first_name
         message_text = update.message.text
         
-
         formatted_message = f"{user_name}: {message_text}"
         #print(f"{formatted_message}\n\n")
-
 
         # Store the message in the SQLite database
         insert_message(conn, (full_name, current_datetime, message_text))
@@ -585,12 +310,6 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(group_conversation) > MAX_MESSAGES:
             del group_conversation[0]
 
-       
-        
-        # Is it Directed to Fiji?
-        fiji_direct = False
-
-        # if stack if over 5 or if the message begins with FIJI, consider responding
         if re.search(r'fiji', message_text, re.IGNORECASE):
 
             # select most recent strings from general conversation list, need to consider number
@@ -608,162 +327,73 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             #print(conversation_str_group)
 
             # probably cleaner way to mandate response if sentence begins with FIJI
-            if re.search(r'fiji', message_text, re.IGNORECASE):
-                should_reply = True
-                fiji_direct = True
-            else:
-                print("NOT DOING THIS ANYMORE")
-                should_reply = False
+            should_reply = True
+            command = f"""reply to : {update.message.text}"""
+            response = await call_openai_api(ai_model, command=command, larger_context=shorter_stack)
 
             # formulate comment with API call with past context and current comments
-            if should_reply:
-                #print(message_stack)
-                #print(conversation_str_message)
-                print(conversation_str_shorter)
-                #print(conversation_str_group)
-                if fiji_direct:
-                   command = f"""reply to : {update.message.text}"""
-                else:
-                    command = f"""
----
-                            **Instructions:**
-
-                            1. Review the "Recent conversation".
-                            2. Respond ONLY to the most recent mention of your name, and address that specific query or statement.
-                            3. DO NOT restate, summarize, or include any part of the original message in your response.
-                            4. Be concise and avoid unnecessary details unless relevant.
-                            5. Ensure to reference user names where appropriate.
-                            6. Avoid greetings unless the conversation is entirely new.
-                            7. Keep your response fun and lively!
-                            8. Do not repeat content from prior messages.
-                            9. Emulate the style in which users are conversing.
-                            10. Do NOT ever use brackets in your replies.
-                            11. Use "Larger context" to inform your response, but do not reference it directly.
-                            12. Do NOT begin your message with "FIJI : " or "FIJI:" or "Fiji : " or "Fiji: "
-                            13. DO NOT USE NAME TAGS BEFORE HAND, NO "USER : " or "USER: " or "User : " or "User: "
-
-                            **Example:** 
-                            If Recent conversation says, "Hey, how's the weather?", your reply should be, "It's sunny!" and NOT "You asked about the weather, it's sunny!".
-
-                            ---
-                            Larger context: {conversation_str_group}
-                            Recent conversation: {conversation_str_message}
-                            """
-
-                #print(command)
-                try:
-                  attempt_count = 0
-                  while attempt_count < MAX_ATTEMPTS:
-                    command = """
-                    """
-                    response = await call_openai_api(ai_model, command=command, larger_context=shorter_stack)
-                    temp_formatted_response = remove_prefix_case_insensitive(response, "Fiji")
-                    temp_formatted_response = strip_punctuation_and_case(response)
-
-                    # Remove "Fiji" from the beginning of the original message, if present
-                    temp_original_message = remove_prefix_case_insensitive(update.message.text, "Fiji")
-                    temp_original_message = strip_punctuation_and_case(temp_original_message)
-
-
-                    print(f"Original message (stripped): {temp_original_message}")
-                    print(f"Attempt {attempt_count + 1}: {temp_formatted_response}")
-
-                    if temp_formatted_response != strip_punctuation_and_case(temp_original_message):
-                        break  # Break out of the loop if the response is different
-                    
-                    attempt_count += 1
-
-                  if attempt_count == MAX_ATTEMPTS:
-                    # Change the command as it's still repeating the input after MAX_ATTEMPTS
-                    new_command = f"You have been unable to respond to this stimuli : {update.message.text}, why? Please try to respond, or give your best reason. Thanks!"
-                    response = await call_openai_api(ai_model, command=new_command, larger_context=shorter_stack)
-
-                  message_stack.clear()
-                  
-                except Exception as e:
-                    # Log the exception and return without sending a message
-                    print(f"An error occurred while calling the OpenAI API: {e}")
-                    return
                 
-                try:
-                    
-                    # add new response to group conversation list
-                    print(f"Original Response: {response}")
+            try:
+                
+                # add new response to group conversation list
+                print(f"Original Response: {response}")
 
-                    formatted_response = remove_prefix_case_insensitive(response, "Fiji: ")
+                formatted_response = remove_prefix_case_insensitive(response, "Fiji: ")
+                print(f"Fiji Formatted : {formatted_response}")
 
-                    print(f"Fiji Formatted : {formatted_response}")
+                formatted_response = formatted_response.replace('\\n', ' ')  # For escaped newline
+                formatted_response = formatted_response.replace('\n', ' ')   # For regular newline
 
-                    formatted_response = formatted_response.replace('\\n', ' ')  # For escaped newline
-                    formatted_response = formatted_response.replace('\n', ' ')   # For regular newline
+                print(f"After replacement: {formatted_response}")
 
-                    print(f"After replacement: {formatted_response}")
+                group_conversation.append(f"Fiji: {formatted_response}")
+                time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
+                insert_message(conn, ("Fiji", time_now, formatted_response))
 
-                    group_conversation.append(f"Fiji: {formatted_response}")
-                    time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
-                    insert_message(conn, ("Fiji", time_now, formatted_response))
+                #conversation_strNEW = "\n".join(group_conversation[-50:])
+                #print(f"Recent General Convo\n\n: {conversation_strNEW}")
 
-                    #conversation_strNEW = "\n".join(group_conversation[-50:])
-                    #print(f"Recent General Convo\n\n: {conversation_strNEW}")
+                # send message to channel
+                await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
 
-                    # send message to channel
-                    await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
+                # Sticker file --- is this too big?
+                #your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
+                #await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
 
-                    # Sticker file --- is this too big?
-                    #your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
-                    #await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
+            except error.RetryAfter as e:
+                
+                # If we get a RetryAfter error, we wait for the specified time and then retry
 
-                except error.RetryAfter as e:
-                    
-                    # If we get a RetryAfter error, we wait for the specified time and then retry
+                print(f"Need to wait for {e.retry_after} seconds due to Telegram rate limits")
 
-                    print(f"Need to wait for {e.retry_after} seconds due to Telegram rate limits")
+                await asyncio.sleep(e.retry_after)
 
-                    await asyncio.sleep(e.retry_after)
+                # Retry sending the message and sticker after waiting
 
-                    # Retry sending the message and sticker after waiting
+                await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
+                await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
 
-                    await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
-                    await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
+            except error.TelegramError as e:
+                
+                # Handle other Telegram related errors
+                print(f"Telegram error occurred: {e.message}")
+            except Exception as e:
+                
+                # Handle any other exceptions
+                print(f"An unexpected error occurred while sending the message or sticker: {e}")
+    pass
 
-                except error.TelegramError as e:
-                    
-                    # Handle other Telegram related errors
-                    print(f"Telegram error occurred: {e.message}")
-                except Exception as e:
-                    
-                    # Handle any other exceptions
-                    print(f"An unexpected error occurred while sending the message or sticker: {e}")
-        pass
-
-
-def startcourt_command(update, context):
-    # Call the function to start the court session
-    start_court(update, context)
-
+#init
 if __name__ == '__main__':
 
     application = ApplicationBuilder().token(
         os.getenv('TELEGRAM_BOT_TOKEN')
     ).build()
 
-
     chat_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, chat)
     application.add_handler(chat_handler)
-
-    startcourt_handler = CommandHandler('startcourt', startcourt_command)
-    application.add_handler(startcourt_handler)
-
     application.add_handler(CommandHandler('fixfiji', reset_command))
-
     application.add_handler(CommandHandler('current_version', current_version_command))
-
-    application.add_handler(CommandHandler('FIJI_TWEET', FIJI_TWEET))
-
-
-    #Turning off Tweets for a week, until better strategy to reset ALGO.
-
-    #threading.Thread(target=run_tweet_loop, daemon=True).start()
 
     # Register the shutdown callback
     atexit.register(shutdown_callback, application)
