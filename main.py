@@ -12,89 +12,55 @@ import time
 import requests
 import threading
 import re
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 import atexit
 import telegram
-from telegram import Update
-from telegram import error
-from telegram import Sticker
-from telegram.ext import ApplicationBuilder, MessageHandler, CallbackContext, filters, ContextTypes, CommandHandler
-from telegram.ext import filters
-from telegram.ext import CallbackContext
-from telegram.ext import PicklePersistence
-from telegram import Bot
-from telegram.error import TimedOut
-import logging
+from telegram import Update, Bot, error
+from telegram.ext import (
+    ApplicationBuilder,
+    MessageHandler,
+    filters,
+    ContextTypes,
+    CommandHandler,
+    Application,
+)
 import asyncio
 import os
 from dotenv import load_dotenv
-import random
-import string
-import getpass
 from db_handler import create_connection, create_table, insert_message
+
 # Initialize the SQLite database connection
 database = "telegram_chat.db"
 conn = create_connection(database)
 create_table(conn)
 
-
-# Set up logging at the top of your script
-#logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-#                   level=logging.INFO)
-#logger = logging.getLogger(__name__)
-
-# Then use logger.info, logger.warning, etc., to log messages throughout your code
-#logger.info('Starting bot 2.0...')
-
 print("I AM ALIVE... STARTING...")
+print(current_version)
+
+# Only log warnings by default
+logging.basicConfig(
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    level=logging.WARNING  # Set to WARNING to reduce output
+)
+logger = logging.getLogger(__name__)
+
+# Set the logging level for the 'httpx' logger to WARNING
+logging.getLogger("httpx").setLevel(logging.WARNING)
+
+logger.info("I AM ALIVE... STARTING...")
 
 # Load the environment variables
-load_dotenv() 
+load_dotenv()
 openai.api_key = os.getenv('OPENAI_API_KEY_JF')
 openai_client = openai.OpenAI(api_key=openai.api_key)
-bot = Bot(os.getenv('TELEGRAM_BOT_TOKEN'))
 
-#update script
-async def skip_past_updates(bot):
-    print("Checking for past updates...")
-    while True:
-        updates = await bot.get_updates()
-        if not updates:  # If no updates are found, break out of the loop.
-            break
-        print(f"Found {len(updates)} past updates.")
-        last_update_id = updates[-1].update_id
-        print(f"Setting offset to {last_update_id + 1}")
-        await bot.get_updates(offset=last_update_id + 1)
-    print("No more past updates found.")
+# Initialize the messages storage for each chat
+messages_by_chat_id = {}
 
-# Manually create and run the event loop
-loop = asyncio.get_event_loop()
-loop.run_until_complete(skip_past_updates(bot))
-
-#import shutdown callback
-async def shutdown_callback(application):
-    print("Shutting down bot...")
-    await application.shutdown()
-    # Perform any additional cleanup here if necessary
-
-# I dont know what this does
-executor = ThreadPoolExecutor(max_workers=1)
-
-# Initialize variables Chat ID Stacks
-group_conversations = {}
-message_stacks = {}
-chat_contexts = {}
-
-# Chat ID context stacks for Dm's and Groups
-group_conversation = []
-message_stack = []
-
-#mid cute
+# AI models
 ai_model = "ft:gpt-4o-2024-08-06:fdasho::A0fEtT3s"
-ai_model_4= "gpt-4"
+ai_model_4 = "gpt-4"
 ai_model_3_5 = "gpt-3.5-turbo"
-global_chat_id = -1001898328325
 
 # Global Context for Tweeting
 global_context = None
@@ -148,14 +114,13 @@ THE CA IS : A9e6JzPQstmz94pMnzxgyV14QUqoULSXuf5FPsq8UiRa
 Remember: Stay true to your character. Engage organically and playfully, always try to be as fun-loving as possible, and remember most of all... just be your self <3
 
 """
+print('The current system prompt for this session is: ', main_prompt)
+print('Chat enabled, to enable verbose logging, turn DEBUG mode on')
 
 # Message Limit
-MAX_MESSAGES = 1000
+MAX_MESSAGES = 5
 
-# Pickle Persistence for Logging Updates and Prevents Spam Overflow
-pp = PicklePersistence(filepath='my_persistence', single_file=False, on_flush=True)
-
-#string formatting
+# String formatting function
 def select_strings(array):
     selected_strings = []
     total_character_count = 0
@@ -178,21 +143,15 @@ def select_strings(array):
 
     return selected_strings
 
-# function for posting stickers
-def sticker_handler(update: Update, context: CallbackContext):
-    if update.message and update.message.sticker:
-        sticker_file_id = update.message.sticker.file_id
-        print(f"Received sticker with file_id: {sticker_file_id}")
-
-#format message for user / assistant API calls 
-def parse_messages(message_stack):
+# Function to parse messages for the OpenAI API
+def parse_messages(conversation_history):
     parsed_messages = []
-    for message in message_stack:
+    for message in conversation_history:
         # Split the message into sender and content
         sender, msg = message.split(":", 1)
         sender = sender.strip()  # Clean up any leading/trailing whitespace
         role = "assistant" if sender == "Fiji" else "user"
-        
+
         # Remove 'Fiji ' from the beginning of Fiji's messages (case-insensitive)
         if role == "user":
             msg = re.sub(r'Fiji\s', '', msg, count=1, flags=re.IGNORECASE).strip()
@@ -202,22 +161,21 @@ def parse_messages(message_stack):
         parsed_messages.append({"role": role, "content": full_message})
     return parsed_messages
 
-
-async def call_openai_api(api_model, command, larger_context, max_tokens=None):
+# Function to call the OpenAI API
+async def call_openai_api(api_model, command, conversation_history, max_tokens=None):
     # Clean the command to remove specific keywords
     command = re.sub(r'Fiji\s', '', command, count=1, flags=re.IGNORECASE).strip()
 
     # Constructing the conversation context
-    context_messages = [{"role": "system", "content": main_prompt}]
-    context_messages.append({"role": "user", "content": command})
-    context_messages += parse_messages(larger_context)
-    print("context", context_messages)
+    formatted_messages = [{"role": "system", "content": main_prompt}]
+    formatted_messages.append({"role": "user", "content": command})
+    formatted_messages += parse_messages(conversation_history)
+    logger.debug("Formatted Messages: %s", formatted_messages)
 
-    print(context_messages)  # Debugging: Print context messages
     try:
         response = openai_client.chat.completions.create(
             model=api_model,
-            messages=context_messages,
+            messages=formatted_messages,
             max_tokens=max_tokens or 150,  # Default to 150 tokens if not specified
             temperature=0.888,
             frequency_penalty=0.555,
@@ -226,178 +184,138 @@ async def call_openai_api(api_model, command, larger_context, max_tokens=None):
         return response.choices[0].message.content
 
     except openai.APIError as e:
-        print(f"OpenAI API error: {e}")
+        logger.error(f"OpenAI API error: {e}")
         return "Something went wrong with the AI response."
     except Exception as e:
-        print(f"An unexpected error occurred: {e}")
+        logger.error(f"An unexpected error occurred: {e}")
         raise  # Optionally re-raise the exception after logging
 
-#fixfiji context reset
-async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    try:
-        # Increment the counter each time the reset command is called
-
-        chat_id = update.message.chat.id
-        if chat_id in message_stacks:
-            message_stacks[chat_id].clear()
-            group_conversations[chat_id].clear()
-
-        await context.bot.send_message(chat_id=chat_id, text=f"Context has been reset. Command called {count} times.")
-    except Exception as e:
-        print(f"Error in reset_command: {e}")
-
-#announce current dev version name
-async def current_version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    c_version = current_version
-    try:
-        # Increment the counter each time the reset command is called
-        chat_id = update.message.chat.id
-        await context.bot.send_message(chat_id=chat_id, text=f"Current Version is : {c_version}.")
-    except Exception as e:
-        print(f"Error in reset_command: {e}")
-
-#funciton to remove 'fiji' from beginning of string
+# Function to remove prefix case-insensitively
 def remove_prefix_case_insensitive(text, prefix):
     if text.lower().startswith(prefix.lower()):
         return text[len(prefix):].lstrip()  # Remove prefix and leading whitespace
     return text
 
-#core chat logic
+# Command handlers
+async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        chat_id = update.message.chat.id
+        if chat_id in messages_by_chat_id:
+            messages_by_chat_id[chat_id].clear()
+
+        await context.bot.send_message(chat_id=chat_id, text="Context has been reset.")
+    except Exception as e:
+        logger.error(f"Error in reset_command: {e}")
+
+async def current_version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    c_version = current_version
+    try:
+        chat_id = update.message.chat.id
+        await context.bot.send_message(chat_id=chat_id, text=f"Current Version is: {c_version}.")
+    except Exception as e:
+        logger.error(f"Error in current_version_command: {e}")
+
+# Core chat logic
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    global global_context
     chat_id = update.message.chat.id
 
-    if chat_id == global_chat_id:
-        global_context = context
+    if chat_id not in messages_by_chat_id:
+        messages_by_chat_id[chat_id] = []
 
-    if chat_id not in message_stacks:
-          message_stacks[chat_id] = []
-          group_conversations[chat_id] = []
+    # Get the list of messages for the current chat
+    chat_messages = messages_by_chat_id[chat_id]
 
-    # Create local references to the specific chat's stacks
-    message_stack = message_stacks[chat_id]
-    group_conversation = group_conversations[chat_id]
-
-    print(f"Chat ID: {chat_id}")
-    # check if update is a message
+    logger.debug(f"Chat ID: {chat_id}")
+    # Check if the update contains a message
     if update.message:
-
-        # format datetime
+        # Format datetime
         current_datetime = update.message.date
-        tempdate = current_datetime.strftime("%H:%M:%S")
-        custom_format = "Now it is %B %d, %Y, and it is %I:%M%p UTC"
-        formatted_datetime = current_datetime.strftime(custom_format)
+        formatted_datetime = current_datetime.strftime("Now it is %B %d, %Y, and it is %I:%M%p UTC")
 
-        first_name = update.message.from_user.first_name
-        last_name = update.message.from_user.last_name 
-        full_name = f"{first_name} {last_name}"
+        user_first_name = update.message.from_user.first_name
+        user_last_name = update.message.from_user.last_name or ""
+        user_full_name = f"{user_first_name} {user_last_name}".strip()
 
-        # Extract the user's first name and the message text
-        user_name = update.message.from_user.first_name
-        message_text = update.message.text
-        
-        formatted_message = f"{user_name}: {message_text}"
-        #print(f"{formatted_message}\n\n")
+        # Get the text of the user's message
+        user_message_text = update.message.text
+
+        # Format the user's message for logging and storage
+        formatted_user_message = f"{user_first_name}: {user_message_text}"
+        logger.debug(f"Received message: {formatted_user_message}")
 
         # Store the message in the SQLite database
-        insert_message(conn, (full_name, current_datetime, message_text))
+        insert_message(conn, (user_full_name, current_datetime, user_message_text))
 
-        # Add the formatted message to the stacks
-        message_stack.append(formatted_message)
-        group_conversation.append(formatted_message)
-        print(f"Message Stack: {message_stack}")
+        # Add the formatted message to the chat messages list
+        chat_messages.append(formatted_user_message)
+        logger.debug(f"Chat Messages: {chat_messages}")
 
-        if len(group_conversation) > MAX_MESSAGES:
-            del group_conversation[0]
+        # Limit the chat messages to MAX_MESSAGES
+        if len(chat_messages) > MAX_MESSAGES:
+            del chat_messages[0]
 
-        if re.search(r'fiji', message_text, re.IGNORECASE):
+        # Check if the message contains 'fiji' (case-insensitive)
+        if re.search(r'fiji', user_message_text, re.IGNORECASE):
+            # Select the most recent messages without exceeding character limit
+            selected_messages = select_strings(chat_messages[-1000:])
 
-            # select most recent strings from general conversation list, need to consider number
-            general_conversation = select_strings(group_conversation[-3050:])
+            # Prepare the command for the AI model
+            command = f"Reply to: {user_message_text}"
 
-             # select most recent strings from general conversation list, need to consider number
-            shorter_stack = select_strings(group_conversation[-999:])
+            # Call the OpenAI API to get a response
+            ai_response = await call_openai_api(
+                api_model=ai_model,
+                command=command,
+                conversation_history=selected_messages
+            )
 
-            conversation_str_message = "\n".join(message_stack)  # gpt read for message
-            conversation_str_shorter = "\n".join(shorter_stack)  # gpt for shorter context
-            conversation_str_group = "\n".join(general_conversation)  # gpt for larger context
+            # Clean up the AI's response
+            formatted_ai_response = remove_prefix_case_insensitive(ai_response, "Fiji: ")
+            formatted_ai_response = formatted_ai_response.replace('\\n', ' ').replace('\n', ' ')
 
-            #print(conversation_str_message)
-            #print(conversation_str_shorter)
-            #print(conversation_str_group)
+            # Add the AI's response to the chat messages
+            chat_messages.append(f"Fiji: {formatted_ai_response}")
+            time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
+            insert_message(conn, ("Fiji", time_now, formatted_ai_response))
 
-            # probably cleaner way to mandate response if sentence begins with FIJI
-            should_reply = True
-            command = f"""reply to : {update.message.text}"""
-            response = await call_openai_api(ai_model, command=command, larger_context=shorter_stack)
-
-            # formulate comment with API call with past context and current comments
-                
+            # Send the AI's response to the chat
             try:
-                
-                # add new response to group conversation list
-                print(f"Original Response: {response}")
-
-                formatted_response = remove_prefix_case_insensitive(response, "Fiji: ")
-                print(f"Fiji Formatted : {formatted_response}")
-
-                formatted_response = formatted_response.replace('\\n', ' ')  # For escaped newline
-                formatted_response = formatted_response.replace('\n', ' ')   # For regular newline
-
-                print(f"After replacement: {formatted_response}")
-
-                group_conversation.append(f"Fiji: {formatted_response}")
-                time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
-                insert_message(conn, ("Fiji", time_now, formatted_response))
-
-                #conversation_strNEW = "\n".join(group_conversation[-50:])
-                #print(f"Recent General Convo\n\n: {conversation_strNEW}")
-
-                # send message to channel
-                await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
-
-                # Sticker file --- is this too big?
-                #your_sticker_file_id = "CAACAgEAAxkBAAEnAsJlNHEpaCLrB6VsS6IWzdw7Rp5ybQAC0AMAAvBWQEWhveTp-VuiDTAE"
-                #await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
-
+                await context.bot.send_message(chat_id=chat_id, text=formatted_ai_response)
             except error.RetryAfter as e:
-                
-                # If we get a RetryAfter error, we wait for the specified time and then retry
-
-                print(f"Need to wait for {e.retry_after} seconds due to Telegram rate limits")
-
+                logger.warning(f"Need to wait for {e.retry_after} seconds due to Telegram rate limits")
                 await asyncio.sleep(e.retry_after)
-
-                # Retry sending the message and sticker after waiting
-
-                await context.bot.send_message(chat_id=update.message.chat.id, text=formatted_response)
-                await context.bot.send_sticker(chat_id=update.message.chat.id, sticker=your_sticker_file_id)
-
+                await context.bot.send_message(chat_id=chat_id, text=formatted_ai_response)
             except error.TelegramError as e:
-                
-                # Handle other Telegram related errors
-                print(f"Telegram error occurred: {e.message}")
+                logger.error(f"Telegram error occurred: {e.message}")
             except Exception as e:
-                
-                # Handle any other exceptions
-                print(f"An unexpected error occurred while sending the message or sticker: {e}")
-    pass
+                logger.error(f"An unexpected error occurred while sending the message: {e}")
 
-#init
+# Function to skip past updates
+async def skip_past_updates(application: Application):
+    bot = application.bot
+    logger.info("Checking for past updates...")
+    while True:
+        updates = await bot.get_updates()
+        if not updates:
+            break
+        logger.info(f"Found {len(updates)} past updates.")
+        last_update_id = updates[-1].update_id
+        logger.info(f"Setting offset to {last_update_id + 1}")
+        await bot.get_updates(offset=last_update_id + 1)
+    logger.info("No more past updates found.")
+
+# Main execution block
 if __name__ == '__main__':
 
     application = ApplicationBuilder().token(
         os.getenv('TELEGRAM_BOT_TOKEN')
-    ).build()
+    ).post_init(skip_past_updates).build()
 
     chat_handler = MessageHandler(filters.TEXT & ~filters.COMMAND, chat)
     application.add_handler(chat_handler)
     application.add_handler(CommandHandler('fixfiji', reset_command))
     application.add_handler(CommandHandler('current_version', current_version_command))
 
-    # Register the shutdown callback
-    atexit.register(shutdown_callback, application)
-    
     while True:
         try:
             application.run_polling()
