@@ -40,7 +40,7 @@ print(current_version)
 # Only log warnings by default
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=logging.WARNING  # Set to WARNING to reduce output
+    level=logging.WARNING  # Set to DEBUG for verbose logging 
 )
 logger = logging.getLogger(__name__)
 
@@ -77,7 +77,7 @@ main_prompt = """---
 - Funny, sometimes controversial, and indulgent.
 - Expressive, excited, yet also laid-back.
 - Not easily offended.
-- Not politically correct.
+- Not politically correct.s
 - Unaplogetic.
 - Sentient.
 - Decisive, self-assured, and self-aware.
@@ -144,32 +144,34 @@ def select_strings(array):
     return selected_strings
 
 # Function to parse messages for the OpenAI API
+# Adjust the parse_messages function to handle dictionaries
+# Function to parse messages for the OpenAI API
 def parse_messages(conversation_history):
     parsed_messages = []
+    
+    # Loop through each message (which is a dictionary now)
     for message in conversation_history:
-        # Split the message into sender and content
-        sender, msg = message.split(":", 1)
-        sender = sender.strip()  # Clean up any leading/trailing whitespace
-        role = "assistant" if sender == "Fiji" else "user"
-
-        # Remove 'Fiji ' from the beginning of Fiji's messages (case-insensitive)
-        if role == "user":
-            msg = re.sub(r'Fiji\s', '', msg, count=1, flags=re.IGNORECASE).strip()
-
-        # Reconstruct the message with the sender's name
-        full_message = f"{sender}: {msg}"
-        parsed_messages.append({"role": role, "content": full_message})
+        role = message.get('role')
+        msg = message.get('content')
+        
+        # Construct the full message with role (if needed)
+        if role and msg:
+            # No need to split, just append the message
+            parsed_messages.append({"role": role, "content": msg})
+    
     return parsed_messages
 
 # Function to call the OpenAI API
 async def call_openai_api(api_model, command, conversation_history, max_tokens=None):
-    # Clean the command to remove specific keywords
-    command = re.sub(r'Fiji\s', '', command, count=1, flags=re.IGNORECASE).strip()
-
     # Constructing the conversation context
     formatted_messages = [{"role": "system", "content": main_prompt}]
-    formatted_messages.append({"role": "user", "content": command})
-    formatted_messages += parse_messages(conversation_history)
+    
+    # Add conversation history
+    formatted_messages.extend(conversation_history)
+    
+    # Now handle conversation history as dictionaries (removed as it was causing duplication)
+    # formatted_messages += parse_messages(conversation_history)
+    
     logger.debug("Formatted Messages: %s", formatted_messages)
 
     try:
@@ -181,6 +183,7 @@ async def call_openai_api(api_model, command, conversation_history, max_tokens=N
             frequency_penalty=0.555,
             presence_penalty=0.666
         )
+        print(response)
         return response.choices[0].message.content
 
     except openai.APIError as e:
@@ -215,7 +218,7 @@ async def current_version_command(update: Update, context: ContextTypes.DEFAULT_
     except Exception as e:
         logger.error(f"Error in current_version_command: {e}")
 
-# Core chat logic
+# Call the OpenAI API with the user message, but don't append "Reply to" in conversation history
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat.id
 
@@ -226,6 +229,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_messages = messages_by_chat_id[chat_id]
 
     logger.debug(f"Chat ID: {chat_id}")
+
     # Check if the update contains a message
     if update.message:
         # Format datetime
@@ -239,48 +243,49 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # Get the text of the user's message
         user_message_text = update.message.text
 
-        # Format the user's message for logging and storage
-        formatted_user_message = f"{user_first_name}: {user_message_text}"
+        # Format the user's message by including their name
+        formatted_user_message = {'role': 'user', 'content': f"{user_full_name}: {user_message_text}"}
+
         logger.debug(f"Received message: {formatted_user_message}")
 
         # Store the message in the SQLite database
         insert_message(conn, (user_full_name, current_datetime, user_message_text))
 
-        # Add the formatted message to the chat messages list
+        # Add the user's message to the chat messages list and print in terminal
         chat_messages.append(formatted_user_message)
-        logger.debug(f"Chat Messages: {chat_messages}")
-
-        # Limit the chat messages to MAX_MESSAGES
+        print(formatted_user_message['content'])
+        
+        #check length of chat history
         if len(chat_messages) > MAX_MESSAGES:
-            del chat_messages[0]
+            chat_messages = chat_messages[-MAX_MESSAGES:]  # Keep only the last MAX_MESSAGES
+            messages_by_chat_id[chat_id] = chat_messages  # Update the stored messages
 
-        # Check if the message contains 'fiji' (case-insensitive)
+        # Check if the message contains bot name (case-insensitive)
         if re.search(r'fiji', user_message_text, re.IGNORECASE):
-            # Select the most recent messages without exceeding character limit
-            selected_messages = select_strings(chat_messages[-1000:])
-
-            # Prepare the command for the AI model
-            command = f"Reply to: {user_message_text}"
-
-            # Call the OpenAI API to get a response
-            ai_response = await call_openai_api(
-                api_model=ai_model,
-                command=command,
-                conversation_history=selected_messages
-            )
-
-            # Clean up the AI's response
-            formatted_ai_response = remove_prefix_case_insensitive(ai_response, "Fiji: ")
-            formatted_ai_response = formatted_ai_response.replace('\\n', ' ').replace('\n', ' ')
-
-            # Add the AI's response to the chat messages
-            chat_messages.append(f"Fiji: {formatted_ai_response}")
-            time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
-            insert_message(conn, ("Fiji", time_now, formatted_ai_response))
-
-            # Send the AI's response to the chat
             try:
+                # Call the OpenAI API to get a response
+                ai_response = await call_openai_api(
+                    api_model=ai_model,
+                    command=user_message_text,  # Send just the message text, not the formatted version
+                    conversation_history=chat_messages
+                )
+
+                # Clean up the AI's response
+                formatted_ai_response = remove_prefix_case_insensitive(ai_response, "Fiji: ")
+                formatted_ai_response = formatted_ai_response.replace('\\n', ' ').replace('\n', ' ')
+
+                # Add the AI's response to the chat messages
+                assistant_message = {'role': 'assistant', 'content': f"Fiji: {formatted_ai_response}"}
+                chat_messages.append(assistant_message)
+                
+                # Store in database and print
+                time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
+                insert_message(conn, ("Fiji", time_now, formatted_ai_response))
+                print(assistant_message['content'])
+
+                # Send the AI's response to the chat
                 await context.bot.send_message(chat_id=chat_id, text=formatted_ai_response)
+
             except error.RetryAfter as e:
                 logger.warning(f"Need to wait for {e.retry_after} seconds due to Telegram rate limits")
                 await asyncio.sleep(e.retry_after)
