@@ -2,7 +2,6 @@ import sys
 import logging
 import os
 from flask import Flask
-from dotenv import load_dotenv
 
 # Configure logging first - before any other operations
 logging.basicConfig(
@@ -26,6 +25,16 @@ def health():
 
 try:
     # Load environment variables
+    from dotenv import load_dotenv
+    from telegram import Update, Bot, error
+    from telegram.ext import (
+        ApplicationBuilder,
+        MessageHandler,
+        filters,
+        ContextTypes,
+        CommandHandler,
+        Application,
+    )
     load_dotenv()
     logger.info("Environment variables loaded")
     logger.info(f"Bot token exists: {'TELEGRAM_BOT_TOKEN' in os.environ}")
@@ -41,19 +50,10 @@ try:
     import re
     from datetime import datetime, timezone
     import atexit
-    import telegram
-    from telegram import Update, Bot, error
-    from telegram.ext import (
-        ApplicationBuilder,
-        MessageHandler,
-        filters,
-        ContextTypes,
-        CommandHandler,
-        Application,
-    )
     import asyncio
     from db_handler import create_connection, create_table, insert_message
     logger.info("All imports successful")
+    
 
     # Initialize OpenAI
     logger.info("Initializing OpenAI...")
@@ -99,16 +99,7 @@ try:
                 break
         selected_strings.reverse()
         return selected_strings
-
-    def parse_messages(conversation_history):
-        parsed_messages = []
-        for message in conversation_history:
-            role = message.get('role')
-            msg = message.get('content')
-            if role and msg:
-                parsed_messages.append({"role": role, "content": msg})
-        return parsed_messages
-
+    
     async def call_openai_api(api_model, command, conversation_history, max_tokens=None):
         logger.info("Calling OpenAI API")
         try:
@@ -127,11 +118,6 @@ try:
             )
             logger.info("OpenAI API call successful")
             return response.choices[0].message.content
-
-        except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
-            return "Something went wrong with the AI response."
-
 
         except Exception as e:
             logger.error(f"OpenAI API error: {e}")
