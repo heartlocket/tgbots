@@ -1,3 +1,22 @@
+import sys
+import logging
+
+# Force immediate logging
+print("Bot starting...", flush=True)
+sys.stdout.flush()
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout),
+        logging.FileHandler('/home/LogFiles/application.log')
+    ]
+)
+
+# Test log at the very start
+logger.info("Application starting...")
+print("Testing stdout...", flush=True)
+
 import openai
 from openai import OpenAI
 import logging
