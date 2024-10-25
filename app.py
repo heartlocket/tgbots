@@ -34,7 +34,7 @@ try:
     # Import other dependencies
     logger.info("Importing dependencies...")
     import openai
-    from openai import OpenAI
+    openai.api_key = os.getenv('OPENAI_API_KEY_JF')
     import time
     import requests
     import threading
@@ -58,7 +58,6 @@ try:
     # Initialize OpenAI
     logger.info("Initializing OpenAI...")
     openai.api_key = os.getenv('OPENAI_API_KEY_JF')
-    openai_client = OpenAI(api_key=openai.api_key)
     logger.info("OpenAI initialized")
 
     # Initialize database
@@ -118,7 +117,7 @@ try:
             
             logger.debug("Formatted Messages: %s", formatted_messages)
 
-            response = openai_client.chat.completions.create(
+            response = openai.ChatCompletion.create(
                 model=api_model,
                 messages=formatted_messages,
                 max_tokens=max_tokens or 150,
@@ -128,6 +127,11 @@ try:
             )
             logger.info("OpenAI API call successful")
             return response.choices[0].message.content
+
+        except Exception as e:
+            logger.error(f"OpenAI API error: {e}")
+            return "Something went wrong with the AI response."
+
 
         except Exception as e:
             logger.error(f"OpenAI API error: {e}")
