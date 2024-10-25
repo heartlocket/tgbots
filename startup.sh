@@ -1,3 +1,3 @@
 #!/bin/bash
-echo "Starting application..."
-python -u app.py > /home/LogFiles/stdout.log 2>/home/LogFiles/stderr.log
+echo "Starting startup script..."
+python -u app.py 2>&1 | tee -a /home/LogFiles/stdout.log
