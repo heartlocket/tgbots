@@ -1,9 +1,29 @@
 import sys
 import logging
 import os
-from flask import Flask
+import threading
+import asyncio
+import time
+import re
+from datetime import datetime, timezone
 
-# Configure logging first - before any other operations
+from flask import Flask
+from dotenv import load_dotenv
+from telegram import Update, error
+from telegram.ext import (
+    ApplicationBuilder,
+    MessageHandler,
+    filters,
+    ContextTypes,
+    CommandHandler,
+    Application,
+)
+
+import openai
+import requests  # If you're using it elsewhere
+from db_handler import create_connection, create_table, insert_message
+
+# Configure logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -25,35 +45,10 @@ def health():
 
 try:
     # Load environment variables
-    from dotenv import load_dotenv
-    from telegram import Update, Bot, error
-    from telegram.ext import (
-        ApplicationBuilder,
-        MessageHandler,
-        filters,
-        ContextTypes,
-        CommandHandler,
-        Application,
-    )
     load_dotenv()
     logger.info("Environment variables loaded")
     logger.info(f"Bot token exists: {'TELEGRAM_BOT_TOKEN' in os.environ}")
     logger.info(f"OpenAI key exists: {'OPENAI_API_KEY_JF' in os.environ}")
-
-    # Import other dependencies
-    logger.info("Importing dependencies...")
-    import openai
-    openai.api_key = os.getenv('OPENAI_API_KEY_JF')
-    import time
-    import requests
-    import threading
-    import re
-    from datetime import datetime, timezone
-    import atexit
-    import asyncio
-    from db_handler import create_connection, create_table, insert_message
-    logger.info("All imports successful")
-    
 
     # Initialize OpenAI
     logger.info("Initializing OpenAI...")
@@ -73,34 +68,25 @@ try:
     logger.info("Database initialized")
 
     # Bot configuration
-    current_version = " CURRENT MODEL   ____Less Laughy+ plus FIL TWEET  Alita 8.00 - (4.oGPT) with Fiji AUTO=Tweet and Teeny Prompting(COMING SOON)" 
+    current_version = "CURRENT MODEL: Less Laughy+ plus FIL TWEET Alita 8.00 - (GPT-4) with Fiji AUTO=Tweet and Teeny Prompting (COMING SOON)"
     messages_by_chat_id = {}
     MAX_MESSAGES = 5
-    ai_model = "ft:gpt-4o-2024-08-06:fdasho::A0fEtT3s"
-    ai_model_4 = "gpt-4"
+    ai_model = "gpt-4"  # Update with your actual model if needed
     ai_model_3_5 = "gpt-3.5-turbo"
-    global_context = None
     logger.info("Bot configured")
 
     main_prompt = """Your original prompt here"""
-
     logger.info("Main prompt loaded")
 
-    # Function to select strings
-    def select_strings(array):
-        selected_strings = []
-        total_character_count = 0
-        for string in reversed(array):
-            string_length = len(string)
-            if total_character_count + string_length <= 4000:
-                selected_strings.append(string)
-                total_character_count += string_length
-            else:
-                break
-        selected_strings.reverse()
-        return selected_strings
-    
-    async def call_openai_api(api_model, command, conversation_history, max_tokens=None):
+    # Helper Functions
+
+    def remove_prefix_case_insensitive(text, prefix):
+        if text.lower().startswith(prefix.lower()):
+            return text[len(prefix):].lstrip()
+        return text
+
+    # OpenAI API call function
+    async def call_openai_api(api_model, conversation_history, max_tokens=None):
         logger.info("Calling OpenAI API")
         try:
             formatted_messages = [{"role": "system", "content": main_prompt}]
@@ -123,10 +109,7 @@ try:
             logger.error(f"OpenAI API error: {e}")
             return "Something went wrong with the AI response."
 
-    def remove_prefix_case_insensitive(text, prefix):
-        if text.lower().startswith(prefix.lower()):
-            return text[len(prefix):].lstrip()
-        return text
+    # Telegram Bot Handlers
 
     async def test_webhook(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.info("Test command received!")
@@ -135,8 +118,7 @@ try:
     async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         try:
             chat_id = update.message.chat.id
-            if chat_id in messages_by_chat_id:
-                messages_by_chat_id[chat_id].clear()
+            messages_by_chat_id.pop(chat_id, None)
             await context.bot.send_message(chat_id=chat_id, text="Context has been reset.")
         except Exception as e:
             logger.error(f"Error in reset_command: {e}")
@@ -160,9 +142,7 @@ try:
         if update.message:
             try:
                 current_datetime = update.message.date
-                user_first_name = update.message.from_user.first_name
-                user_last_name = update.message.from_user.last_name or ""
-                user_full_name = f"{user_first_name} {user_last_name}".strip()
+                user_full_name = update.message.from_user.full_name
                 user_message_text = update.message.text
 
                 formatted_user_message = {'role': 'user', 'content': f"{user_full_name}: {user_message_text}"}
@@ -180,7 +160,6 @@ try:
                     try:
                         ai_response = await call_openai_api(
                             api_model=ai_model,
-                            command=user_message_text,
                             conversation_history=chat_messages
                         )
 
