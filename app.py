@@ -1,13 +1,10 @@
 import sys
 import logging
 import os
+from flask import Flask
 from dotenv import load_dotenv
 
-# Immediate startup logging
-print("1. Script starting...", flush=True)
-sys.stdout.flush()
-
-# Configure logging first
+# Configure logging first - before any other operations
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -17,17 +14,25 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
-print("2. Logging configured", flush=True)
+logger.info("Application starting...")
+
+# Initialize Flask
+app = Flask(__name__)
+PORT = os.getenv('PORT', '8000')
+
+@app.route('/health')
+def health():
+    return 'OK'
 
 try:
     # Load environment variables
     load_dotenv()
-    print("3. Environment variables loaded", flush=True)
-    print(f"4. Bot token exists: {'TELEGRAM_BOT_TOKEN' in os.environ}", flush=True)
-    print(f"5. OpenAI key exists: {'OPENAI_API_KEY_JF' in os.environ}", flush=True)
+    logger.info("Environment variables loaded")
+    logger.info(f"Bot token exists: {'TELEGRAM_BOT_TOKEN' in os.environ}")
+    logger.info(f"OpenAI key exists: {'OPENAI_API_KEY_JF' in os.environ}")
 
     # Import other dependencies
-    print("6. Importing dependencies...", flush=True)
+    logger.info("Importing dependencies...")
     import openai
     from openai import OpenAI
     import time
@@ -48,25 +53,25 @@ try:
     )
     import asyncio
     from db_handler import create_connection, create_table, insert_message
-    print("7. All imports successful", flush=True)
+    logger.info("All imports successful")
 
     # Initialize OpenAI
-    print("8. Initializing OpenAI...", flush=True)
+    logger.info("Initializing OpenAI...")
     openai.api_key = os.getenv('OPENAI_API_KEY_JF')
     openai_client = OpenAI(api_key=openai.api_key)
-    print("9. OpenAI initialized", flush=True)
+    logger.info("OpenAI initialized")
 
     # Initialize database
-    print("10. Setting up database...", flush=True)
+    logger.info("Setting up database...")
     if 'WEBSITE_SITE_NAME' in os.environ:
         database = "/home/site/wwwroot/telegram_chat.db"
     else:
         database = "telegram_chat.db"
-    print(f"11. Database path: {database}", flush=True)
+    logger.info(f"Database path: {database}")
     
     conn = create_connection(database)
     create_table(conn)
-    print("12. Database initialized", flush=True)
+    logger.info("Database initialized")
 
     # Bot configuration
     current_version = " CURRENT MODEL   ____Less Laughy+ plus FIL TWEET  Alita 8.00 - (4.oGPT) with Fiji AUTO=Tweet and Teeny Prompting(COMING SOON)" 
@@ -76,11 +81,11 @@ try:
     ai_model_4 = "gpt-4"
     ai_model_3_5 = "gpt-3.5-turbo"
     global_context = None
-    print("13. Bot configured", flush=True)
+    logger.info("Bot configured")
 
     main_prompt = """Your original prompt here"""
 
-    print("14. Main prompt loaded", flush=True)
+    logger.info("Main prompt loaded")
 
     # Function to select strings
     def select_strings(array):
@@ -106,7 +111,7 @@ try:
         return parsed_messages
 
     async def call_openai_api(api_model, command, conversation_history, max_tokens=None):
-        print("15. Calling OpenAI API", flush=True)
+        logger.info("Calling OpenAI API")
         try:
             formatted_messages = [{"role": "system", "content": main_prompt}]
             formatted_messages.extend(conversation_history)
@@ -121,11 +126,10 @@ try:
                 frequency_penalty=0.555,
                 presence_penalty=0.666
             )
-            print("16. OpenAI API call successful", flush=True)
+            logger.info("OpenAI API call successful")
             return response.choices[0].message.content
 
         except Exception as e:
-            print(f"ERROR in OpenAI call: {str(e)}", flush=True)
             logger.error(f"OpenAI API error: {e}")
             return "Something went wrong with the AI response."
 
@@ -135,7 +139,7 @@ try:
         return text
 
     async def test_webhook(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        print("Test command received!", flush=True)
+        logger.info("Test command received!")
         await update.message.reply_text("Bot is working!")
 
     async def reset_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -145,7 +149,6 @@ try:
                 messages_by_chat_id[chat_id].clear()
             await context.bot.send_message(chat_id=chat_id, text="Context has been reset.")
         except Exception as e:
-            print(f"Error in reset_command: {str(e)}", flush=True)
             logger.error(f"Error in reset_command: {e}")
 
     async def current_version_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -153,11 +156,10 @@ try:
             chat_id = update.message.chat.id
             await context.bot.send_message(chat_id=chat_id, text=f"Current Version is: {current_version}")
         except Exception as e:
-            print(f"Error in current_version_command: {str(e)}", flush=True)
             logger.error(f"Error in current_version_command: {e}")
 
     async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        print("17. Chat function called", flush=True)
+        logger.info("Chat function called")
         chat_id = update.message.chat.id
 
         if chat_id not in messages_by_chat_id:
@@ -174,7 +176,7 @@ try:
                 user_message_text = update.message.text
 
                 formatted_user_message = {'role': 'user', 'content': f"{user_full_name}: {user_message_text}"}
-                print(f"18. Received message: {user_message_text[:50]}...", flush=True)
+                logger.info(f"Received message: {user_message_text[:50]}...")
 
                 insert_message(conn, (user_full_name, current_datetime, user_message_text))
                 chat_messages.append(formatted_user_message)
@@ -184,7 +186,7 @@ try:
                     messages_by_chat_id[chat_id] = chat_messages
 
                 if re.search(r'fiji', user_message_text, re.IGNORECASE):
-                    print("19. Fiji keyword found", flush=True)
+                    logger.info("Fiji keyword found")
                     try:
                         ai_response = await call_openai_api(
                             api_model=ai_model,
@@ -201,25 +203,23 @@ try:
                         time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
                         insert_message(conn, ("Fiji", time_now, formatted_ai_response))
                         
-                        print("20. Sending response to user", flush=True)
+                        logger.info("Sending response to user")
                         await context.bot.send_message(chat_id=chat_id, text=formatted_ai_response)
 
                     except error.RetryAfter as e:
-                        print(f"Rate limit error: {str(e)}", flush=True)
+                        logger.error(f"Rate limit error: {e}")
                         await asyncio.sleep(e.retry_after)
                         await context.bot.send_message(chat_id=chat_id, text=formatted_ai_response)
                     except Exception as e:
-                        print(f"Error in chat function: {str(e)}", flush=True)
                         logger.error(f"Error processing message: {e}")
                         await context.bot.send_message(chat_id=chat_id, text="Sorry, I encountered an error.")
 
             except Exception as e:
-                print(f"Error in message handling: {str(e)}", flush=True)
                 logger.error(f"Error in chat handler: {e}")
                 await context.bot.send_message(chat_id=chat_id, text="Sorry, something went wrong.")
 
     async def skip_past_updates(application: Application):
-        print("21. Skipping past updates", flush=True)
+        logger.info("Skipping past updates")
         bot = application.bot
         logger.info("Checking for past updates...")
         while True:
@@ -232,44 +232,50 @@ try:
             await bot.get_updates(offset=last_update_id + 1)
         logger.info("No more past updates found.")
 
-    def main():
-        print("22. Starting main...", flush=True)
+    def run_bot():
+        logger.info("Starting bot...")
         try:
-            print("23. Creating application builder...", flush=True)
+            logger.info("Creating application builder...")
             application = ApplicationBuilder().token(
                 os.getenv('TELEGRAM_BOT_TOKEN')
             ).post_init(skip_past_updates).build()
-            print("24. Application built", flush=True)
+            logger.info("Application built")
 
-            print("25. Adding handlers...", flush=True)
+            logger.info("Adding handlers...")
             application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
             application.add_handler(CommandHandler('test', test_webhook))
             application.add_handler(CommandHandler('fixfiji', reset_command))
             application.add_handler(CommandHandler('current_version', current_version_command))
-            print("26. Handlers added", flush=True)
+            logger.info("Handlers added")
 
-            print("27. Starting polling...", flush=True)
+            logger.info("Starting polling...")
             application.run_polling(drop_pending_updates=True)
-            print("28. Polling started", flush=True)
+            logger.info("Polling started")
 
         except Exception as e:
-            print(f"ERROR in main: {str(e)}", flush=True)
             logger.error(f"Critical error starting bot: {e}")
             raise
 
+    def main():
+        logger.info("Starting main application...")
+        # Start the bot in a separate thread
+        bot_thread = threading.Thread(target=lambda: asyncio.run(run_bot()))
+        bot_thread.daemon = True
+        bot_thread.start()
+        
+        # Start the Flask application
+        logger.info(f"Starting web server on port {PORT}")
+        app.run(host='0.0.0.0', port=int(PORT))
+
     if __name__ == '__main__':
-        print("29. Entering main block...", flush=True)
         while True:
             try:
                 main()
             except Exception as e:
-                print(f"CRASH: {str(e)}", flush=True)
-                logger.error(f"Bot crashed: {e}")
-                print("Restarting in 10 seconds...", flush=True)
+                logger.error(f"Application crashed: {e}")
+                logger.info("Restarting in 10 seconds...")
                 time.sleep(10)
 
 except Exception as e:
-    print(f"STARTUP ERROR: {str(e)}", flush=True)
-    if logger:
-        logger.error(f"Startup error: {e}")
+    logger.error(f"Startup error: {e}")
     raise
