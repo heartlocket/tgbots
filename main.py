@@ -124,7 +124,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         user_full_name = update.message.from_user.full_name
         user_message_text = update.message.text
-
+print(hi)
         formatted_user_message = {'role': 'user', 'content': f"{user_full_name}: {user_message_text}"}
         chat_messages.append(formatted_user_message)
         
