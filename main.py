@@ -90,7 +90,7 @@ async def call_openai_api(api_model, conversation_history, max_tokens=None):
         formatted_messages = [{"role": "system", "content": main_prompt}]
         formatted_messages.extend(conversation_history)
 
-        response = await client.chat.completions.create(
+        response = client.chat.completions.create(  # Removed await here
             model=api_model,
             messages=formatted_messages,
             max_tokens=max_tokens or 150,
