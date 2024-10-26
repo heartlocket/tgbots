@@ -1,21 +1,8 @@
-# Core dependencies
-python-telegram-bot==20.6
+python-telegram-bot==20.7
 python-dotenv==1.0.0
 openai==0.27.2
-requests==2.28.2
-Flask==3.0.3
-
-# Async support (required by python-telegram-bot)
-aiohttp==3.8.4
-
-# Date handling
+requests==2.31.0
+quart==0.18.4
+werkzeug==2.3.7
 python-dateutil==2.8.2
-
-# SQLite support (if needed)
-# sqlite3 (Note: sqlite3 is included in Python's standard library)
-
-# Azure deployment packages (if needed)
-azure-identity
-azure-storage-blob
-azure-monitor-opentelemetry
-applicationinsights>=0.11.9
+# Add any other dependencies you need
