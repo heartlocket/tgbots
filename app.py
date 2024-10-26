@@ -1,5 +1,6 @@
 print('APP STARTING APP STARTING APP STARTING')
 import sys
+import pkg_resources
 import logging
 import os
 import asyncio
@@ -151,6 +152,22 @@ async def set_webhook():
         return "Webhook setup successful"
     else:
         return "Webhook setup failed"
+
+@app.route('/version')
+async def version():
+    try:
+        versions = {
+            'hypercorn': pkg_resources.get_distribution('hypercorn').version,
+            'openai': pkg_resources.get_distribution('openai').version,
+            'python-telegram-bot': pkg_resources.get_distribution('python-telegram-bot').version,
+            'quart': pkg_resources.get_distribution('quart').version
+        }
+        return versions
+    except Exception as e:
+        return {'error': str(e)}
+
+
+
 
 @app.route('/health')
 async def health():
