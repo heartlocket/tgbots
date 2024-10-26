@@ -1,3 +1,4 @@
+print('APP STARTING APP STARTING APP STARTING')
 import sys
 import logging
 import os
