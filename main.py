@@ -35,6 +35,13 @@ quart_logger = logging.getLogger('quart.app')
 hypercorn_logger = logging.getLogger('hypercorn')
 telegram_logger = logging.getLogger('telegram')
 
+# After logging setup
+logging.getLogger().setLevel(logging.ERROR)  # Root logger to ERROR
+logger.setLevel(logging.ERROR)  # Our logger to ERROR
+quart_logger.setLevel(logging.ERROR)
+hypercorn_logger.setLevel(logging.ERROR)
+telegram_logger.setLevel(logging.ERROR)
+
 # Initial startup logs
 logger.error("STARTUP TEST - Application beginning initialization")
 
@@ -68,14 +75,10 @@ ai_model = "gpt-4"
 
 main_prompt = """Your original prompt here"""
 
-# Initialize bot at module level
-try:
-    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
-    bot = application.bot
-    logger.info("Bot initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize bot: {e}")
-    raise
+# Global variables for application state
+application = None
+bot = None
+initialized = False
 
 def remove_prefix_case_insensitive(text, prefix):
     if text.lower().startswith(prefix.lower()):
@@ -113,7 +116,6 @@ async def current_version_command(update: Update, context: ContextTypes.DEFAULT_
     chat_id = update.message.chat.id
     await context.bot.send_message(chat_id=chat_id, text=f"Current Version is: {current_version}")
 
-print('test')
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat.id
 
@@ -155,10 +157,33 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.error(f"Error processing message: {e}")
                 await context.bot.send_message(chat_id=chat_id, text="Sorry, I encountered an error.")
 
+async def ensure_application_initialized():
+    global application, bot, initialized
+    if not initialized:
+        try:
+            logger.error("Initializing application...")
+            application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+            bot = application.bot
+            
+            # Add handlers
+            application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
+            application.add_handler(CommandHandler('test', test_webhook))
+            application.add_handler(CommandHandler('fixfiji', reset_command))
+            application.add_handler(CommandHandler('current_version', current_version_command))
+            
+            await application.initialize()
+            await application.start()
+            initialized = True
+            logger.error("Application initialized successfully")
+        except Exception as e:
+            logger.error(f"Failed to initialize application: {e}", exc_info=True)
+            raise
+
 @app.route('/webhook', methods=['POST'])
 async def webhook():
     logger.info("Webhook endpoint called")
     try:
+        await ensure_application_initialized()
         request_data = await request.get_json()
         logger.debug(f"Webhook data received: {request_data}")
         update = Update.de_json(request_data, bot)
@@ -172,7 +197,7 @@ async def webhook():
 async def set_webhook():
     try:
         webhook_url = f"{WEBHOOK_URL}/webhook"
-        logger.error(f"Setting webhook to URL: {webhook_url}")  # Using error for visibility
+        logger.error(f"Setting webhook to URL: {webhook_url}")
         await bot.delete_webhook(drop_pending_updates=True)
         s = await bot.set_webhook(webhook_url)
         if s:
@@ -212,21 +237,14 @@ async def favicon():
     return '', 204
 
 async def main():
-    # Add handlers
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
-    application.add_handler(CommandHandler('test', test_webhook))
-    application.add_handler(CommandHandler('fixfiji', reset_command))
-    application.add_handler(CommandHandler('current_version', current_version_command))
-
     try:
-        await application.initialize()
-        await application.start()
-        
+        await ensure_application_initialized()
         logger.info(f"Starting Quart application on port {PORT}")
         await app.run_task(host='0.0.0.0', port=PORT)
     finally:
-        await application.stop()
-        await application.shutdown()
+        if initialized:
+            await application.stop()
+            await application.shutdown()
 
 if __name__ == '__main__':
     asyncio.run(main())
