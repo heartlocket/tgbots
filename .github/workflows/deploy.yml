@@ -7,7 +7,7 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: hit1    # Set this to your application's name
-  PYTHON_VERSION: '3.9'
+  PYTHON_VERSION: '3.11'
 
 jobs:
   build-and-deploy:

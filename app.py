@@ -16,7 +16,6 @@ from telegram.ext import (
     CommandHandler,
 )
 import openai
-from db_handler import create_connection, create_table, insert_message
 
 # Configure logging
 logging.basicConfig(
@@ -37,7 +36,7 @@ PORT = int(os.environ.get('PORT', 8000))
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY_JF')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL')  # Public URL for Telegram to send updates
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
 
 # Verify environment variables
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
@@ -46,11 +45,6 @@ if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
 
 # Initialize OpenAI
 openai.api_key = OPENAI_API_KEY
-
-# Initialize database
-database = "telegram_chat.db"
-conn = create_connection(database)
-create_table(conn)
 
 # Bot configuration
 current_version = "CURRENT MODEL: Version 8.00 with Fiji AUTO=Tweet"
@@ -64,14 +58,11 @@ main_prompt = """Your original prompt here"""
 application = None
 bot = None
 
-# Helper Functions
-
 def remove_prefix_case_insensitive(text, prefix):
     if text.lower().startswith(prefix.lower()):
         return text[len(prefix):].lstrip()
     return text
 
-# OpenAI API call function
 async def call_openai_api(api_model, conversation_history, max_tokens=None):
     try:
         formatted_messages = [{"role": "system", "content": main_prompt}]
@@ -90,8 +81,6 @@ async def call_openai_api(api_model, conversation_history, max_tokens=None):
     except Exception as e:
         logger.error(f"OpenAI API error: {e}")
         return "Something went wrong with the AI response."
-
-# Telegram Bot Handlers
 
 async def test_webhook(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Bot is working!")
@@ -114,13 +103,10 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_messages = messages_by_chat_id[chat_id]
 
     if update.message:
-        current_datetime = update.message.date
         user_full_name = update.message.from_user.full_name
         user_message_text = update.message.text
 
         formatted_user_message = {'role': 'user', 'content': f"{user_full_name}: {user_message_text}"}
-
-        insert_message(conn, (user_full_name, current_datetime, user_message_text))
         chat_messages.append(formatted_user_message)
         
         if len(chat_messages) > MAX_MESSAGES:
@@ -140,9 +126,6 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 assistant_message = {'role': 'assistant', 'content': f"Fiji: {formatted_ai_response}"}
                 chat_messages.append(assistant_message)
                 
-                time_now = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S%z')
-                insert_message(conn, ("Fiji", time_now, formatted_ai_response))
-                
                 await context.bot.send_message(chat_id=chat_id, text=formatted_ai_response)
 
             except error.RetryAfter as e:
@@ -152,16 +135,14 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.error(f"Error processing message: {e}")
                 await context.bot.send_message(chat_id=chat_id, text="Sorry, I encountered an error.")
 
-# Quart route to receive updates from Telegram
 @app.route('/webhook', methods=['POST'])
 async def webhook():
-    global application  # Ensure we're using the global application variable
+    global application
     request_data = await request.get_json()
     update = Update.de_json(request_data, bot)
     await application.process_update(update)
     return 'OK'
 
-# Quart route to set the webhook
 @app.route('/set_webhook', methods=['GET', 'POST'])
 async def set_webhook():
     s = await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
@@ -180,42 +161,34 @@ async def index():
 
 @app.route('/favicon.ico')
 async def favicon():
-    return '', 204  # Respond with 'No Content'
-
+    return '', 204
 
 async def main():
-    global application  # Declare as global to modify the global variable
-    global bot          # Declare as global to modify the global variable
+    global application
+    global bot
 
-    # Create application with proper configuration
     application = (
         ApplicationBuilder()
         .token(TELEGRAM_BOT_TOKEN)
         .build()
     )
 
-    # Add handlers
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     application.add_handler(CommandHandler('test', test_webhook))
     application.add_handler(CommandHandler('fixfiji', reset_command))
     application.add_handler(CommandHandler('current_version', current_version_command))
 
-    # Get the bot instance
     bot = application.bot
 
-    # Delete any existing webhook and set a new one
     await bot.delete_webhook(drop_pending_updates=True)
     await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
-    # Initialize and start the application
     await application.initialize()
     await application.start()
 
-    # Start the Quart app
     try:
         await app.run_task(host='0.0.0.0', port=PORT)
     finally:
-        # Gracefully stop the application
         await application.stop()
         await application.shutdown()
 
