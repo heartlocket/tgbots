@@ -1,4 +1,4 @@
-print('APP STARTING APP STARTING APP STARTING again')
+print('test: APP STARTING APP STARTING APP STARTING again!')
 import sys
 import pkg_resources
 import logging
