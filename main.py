@@ -19,7 +19,8 @@ from telegram.ext import (
 )
 import openai
 print('loggging')
-# Configure logging x 
+
+# Enhanced logging configuration
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
@@ -27,18 +28,29 @@ logging.basicConfig(
         logging.StreamHandler(sys.stdout),
     ]
 )
+
+# Setup specific loggers
 logger = logging.getLogger(__name__)
-logger.info("Application starting...")
+quart_logger = logging.getLogger('quart.app')
+hypercorn_logger = logging.getLogger('hypercorn')
+telegram_logger = logging.getLogger('telegram')
+
+# Initial startup logs
+logger.error("STARTUP TEST - Application beginning initialization")
 
 # Initialize Quart
 app = Quart(__name__)
 PORT = int(os.environ.get('PORT', 8000))
+logger.info(f"Starting with PORT: {PORT}")
 
 # Load environment variables
 load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY_JF')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+if WEBHOOK_URL and WEBHOOK_URL.endswith('/'):
+    WEBHOOK_URL = WEBHOOK_URL.rstrip('/')
+logger.info(f"Webhook URL: {WEBHOOK_URL}")
 
 # Verify environment variables
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
@@ -56,9 +68,14 @@ ai_model = "gpt-4"
 
 main_prompt = """Your original prompt here"""
 
-# Declare application and bot as global variables
-application = None
-bot = None
+# Initialize bot at module level
+try:
+    application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
+    bot = application.bot
+    logger.info("Bot initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize bot: {e}")
+    raise
 
 def remove_prefix_case_insensitive(text, prefix):
     if text.lower().startswith(prefix.lower()):
@@ -139,19 +156,33 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 @app.route('/webhook', methods=['POST'])
 async def webhook():
-    global application
-    request_data = await request.get_json()
-    update = Update.de_json(request_data, bot)
-    await application.process_update(update)
-    return 'OK'
+    logger.info("Webhook endpoint called")
+    try:
+        request_data = await request.get_json()
+        logger.debug(f"Webhook data received: {request_data}")
+        update = Update.de_json(request_data, bot)
+        await application.process_update(update)
+        return 'OK'
+    except Exception as e:
+        logger.error(f"Webhook error: {e}", exc_info=True)
+        return 'Error', 500
 
 @app.route('/set_webhook', methods=['GET', 'POST'])
 async def set_webhook():
-    s = await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-    if s:
-        return "Webhook setup successful"
-    else:
-        return "Webhook setup failed"
+    try:
+        webhook_url = f"{WEBHOOK_URL}/webhook"
+        logger.error(f"Setting webhook to URL: {webhook_url}")  # Using error for visibility
+        await bot.delete_webhook(drop_pending_updates=True)
+        s = await bot.set_webhook(webhook_url)
+        if s:
+            logger.info("Webhook setup successful")
+            return "Webhook setup successful"
+        else:
+            logger.error("Webhook setup returned False")
+            return "Webhook setup failed", 500
+    except Exception as e:
+        logger.error(f"Webhook setup failed with error: {str(e)}", exc_info=True)
+        return f"Webhook setup failed: {str(e)}", 500
 
 @app.route('/version')
 async def version():
@@ -166,11 +197,9 @@ async def version():
     except Exception as e:
         return {'error': str(e)}
 
-
-
-
 @app.route('/health')
 async def health():
+    logger.info("Health check called")
     return 'OK'
 
 @app.route('/')
@@ -182,29 +211,17 @@ async def favicon():
     return '', 204
 
 async def main():
-    global application
-    global bot
-
-    application = (
-        ApplicationBuilder()
-        .token(TELEGRAM_BOT_TOKEN)
-        .build()
-    )
-
+    # Add handlers
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
     application.add_handler(CommandHandler('test', test_webhook))
     application.add_handler(CommandHandler('fixfiji', reset_command))
     application.add_handler(CommandHandler('current_version', current_version_command))
 
-    bot = application.bot
-
-    await bot.delete_webhook(drop_pending_updates=True)
-    await bot.set_webhook(f"{WEBHOOK_URL}/webhook")
-
-    await application.initialize()
-    await application.start()
-
     try:
+        await application.initialize()
+        await application.start()
+        
+        logger.info(f"Starting Quart application on port {PORT}")
         await app.run_task(host='0.0.0.0', port=PORT)
     finally:
         await application.stop()

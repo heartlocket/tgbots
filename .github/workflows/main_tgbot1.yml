@@ -41,7 +41,8 @@ jobs:
           name: python-app
           path: |
             release.zip
-            !venv/
+            !venv/    clean: true  # Add this line
+
 
   deploy:
     runs-on: ubuntu-latest
@@ -75,4 +76,6 @@ jobs:
         with:
           app-name: 'tgbot1'
           slot-name: 'Production'
+          clean: true  
+
           
