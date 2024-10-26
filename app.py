@@ -31,7 +31,7 @@ logger.info("Application starting...")
 
 # Initialize Quart
 app = Quart(__name__)
-PORT = int(os.environ.get('PORT', '8443'))  # Use port 8443 for HTTPS
+PORT = int(os.environ.get('PORT', 8000))
 
 # Load environment variables
 load_dotenv()
@@ -173,6 +173,15 @@ async def set_webhook():
 @app.route('/health')
 async def health():
     return 'OK'
+
+@app.route('/')
+async def index():
+    return 'Hello, world!'
+
+@app.route('/favicon.ico')
+async def favicon():
+    return '', 204  # Respond with 'No Content'
+
 
 async def main():
     global application  # Declare as global to modify the global variable
