@@ -1,6 +1,6 @@
 # Core dependencies from code imports
 python-telegram-bot==20.7    # For Telegram bot functionality
-openai==0.27.2              # For OpenAI API calls
+openai # For OpenAI API calls
 python-dotenv==1.0.0        # For environment variable management
 quart==0.18.4              # For async web framework
 
