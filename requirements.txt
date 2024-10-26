@@ -13,4 +13,3 @@ werkzeug==2.3.7
 wsproto==1.2.0
 openai==0.27.2
 python-dateutil==2.8.2
-# Add any other dependencies your application requires

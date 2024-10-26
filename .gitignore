@@ -9,5 +9,6 @@ venv/
 __pycache__/FijiTwitterBot.cpython-39.pyc
 __pycache__/db_handler.cpython-39.pyc
 .python-version
+venv/
 *.pyc
 ``
