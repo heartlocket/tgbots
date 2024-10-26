@@ -17,6 +17,7 @@ from telegram.ext import (
     CommandHandler,
 )
 import openai
+from openai import OpenAI
 print('loggging')
 
 # Enhanced logging configuration
@@ -64,7 +65,7 @@ if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
     sys.exit(1)
 
 # Initialize OpenAI
-openai.api_key = OPENAI_API_KEY
+client = OpenAI(api_key=OPENAI_API_KEY)
 
 # Bot configuration
 current_version = "CURRENT MODEL: Version 8.00 with Fiji AUTO=Tweet"
@@ -89,7 +90,7 @@ async def call_openai_api(api_model, conversation_history, max_tokens=None):
         formatted_messages = [{"role": "system", "content": main_prompt}]
         formatted_messages.extend(conversation_history)
 
-        response = await openai.ChatCompletion.acreate(
+        response = await client.chat.completions.create(
             model=api_model,
             messages=formatted_messages,
             max_tokens=max_tokens or 150,
