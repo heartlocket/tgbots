@@ -1,9 +1,16 @@
+aiofiles==24.1.0
+blinker==1.5
+h2==4.1.0
+hpack==4.0.0
+hypercorn==0.17.3
+hyperframe==6.0.1
+priority==2.0.0
 python-telegram-bot==20.7
 python-dotenv==1.0.0
-openai==0.27.2
-hypercorn==0.14.3
-requests==2.31.0
 quart==0.18.4
+requests==2.31.0
 werkzeug==2.3.7
+wsproto==1.2.0
+openai==0.27.2
 python-dateutil==2.8.2
-# Add any other dependencies you need
+# Add any other dependencies your application requires
