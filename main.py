@@ -113,6 +113,7 @@ async def current_version_command(update: Update, context: ContextTypes.DEFAULT_
     chat_id = update.message.chat.id
     await context.bot.send_message(chat_id=chat_id, text=f"Current Version is: {current_version}")
 
+print('test')
 async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat.id
 
@@ -124,7 +125,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message:
         user_full_name = update.message.from_user.full_name
         user_message_text = update.message.text
-print(hi)
+
         formatted_user_message = {'role': 'user', 'content': f"{user_full_name}: {user_message_text}"}
         chat_messages.append(formatted_user_message)
         
