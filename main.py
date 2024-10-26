@@ -18,8 +18,8 @@ from telegram.ext import (
     CommandHandler,
 )
 import openai
-
-# Configure logging
+print('loggging')
+# Configure logging x 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     level=logging.INFO,
