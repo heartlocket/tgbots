@@ -63,6 +63,7 @@ async def call_openai_api(api_model, conversation_history, max_tokens=None):
         logger.debug("Calling OpenAI API...")
         formatted_messages = [{"role": "system", "content": main_prompt}]
         formatted_messages.extend(conversation_history)
+        logger.debug(formatted_messages)
         response = client.chat.completions.create(
             model=api_model,
             messages=formatted_messages,
@@ -89,7 +90,7 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if len(chat_messages) > MAX_MESSAGES:
         chat_messages = chat_messages[-MAX_MESSAGES:]
         messages_by_chat_id[chat_id] = chat_messages
-
+    logger.debug(chat_messages)
     if re.search(r'(hitler|bot_name)', user_message_text, re.IGNORECASE):
         logger.debug("Trigger word detected, calling OpenAI...")
         ai_response = await call_openai_api(ai_model, chat_messages)
