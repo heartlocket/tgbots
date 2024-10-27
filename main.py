@@ -94,8 +94,8 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.debug("Trigger word detected, calling OpenAI...")
         ai_response = await call_openai_api(ai_model, chat_messages)
         await context.bot.send_message(chat_id=chat_id, text=ai_response)
-    else:
-        await context.bot.send_message(chat_id=chat_id, text="Trigger not detected.")
+    # else:
+    #     await context.bot.send_message(chat_id=chat_id, text="Trigger not detected.")
 
 # Handlers
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
