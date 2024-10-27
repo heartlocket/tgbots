@@ -34,7 +34,7 @@ load_dotenv()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY_JF')
 WEBHOOK_URL = os.getenv('WEBHOOK_URL').rstrip('/') if os.getenv('WEBHOOK_URL') else None
-print(os.getenv('WEBHOOK_URL'))
+
 # Validate environment variables
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
     logger.error("Missing environment variables. Please set TELEGRAM_BOT_TOKEN, OPENAI_API_KEY_JF, and WEBHOOK_URL.")
@@ -90,6 +90,18 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # Handlers
 application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat))
 
+@app.before_serving
+async def startup():
+    await application.initialize()
+    await application.start()
+    logger.info("Application initialized and started.")
+
+@app.after_serving
+async def shutdown():
+    await application.stop()
+    await application.shutdown()
+    logger.info("Application stopped and shutdown.")
+
 @app.route('/webhook', methods=['POST'])
 async def webhook():
     logger.info("Webhook called")
@@ -105,16 +117,8 @@ async def webhook():
 
 # Main app runner
 async def main():
-    try:
-        await application.initialize()
-        await application.start()
-        logger.info("Starting Quart application")
-        await app.run_task(host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))
-    finally:
-        await application.stop()
-        await application.shutdown()
+    logger.info("Starting Quart application")
+    await app.run_task(host='0.0.0.0', port=int(os.environ.get('PORT', 8000)))
 
 if __name__ == '__main__':
     asyncio.run(main())
-
-
