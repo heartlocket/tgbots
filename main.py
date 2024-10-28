@@ -67,7 +67,7 @@ async def call_openai_api(api_model, conversation_history, max_tokens=None):
             model=api_model,
             messages=formatted_messages,
             max_tokens=max_tokens or 150,
-            temperature=0.888,
+            temperature=0.4,
             frequency_penalty=0.555,
             presence_penalty=0.666
         )
