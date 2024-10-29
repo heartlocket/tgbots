@@ -3,6 +3,7 @@ python-telegram-bot==20.7    # For Telegram bot functionality
 openai # For OpenAI API calls
 python-dotenv==1.0.0        # For environment variable management
 quart==0.18.4              # For async web framework
+solana
 
 # Quart dependencies (these are necessary because Quart needs them)
 hypercorn==0.17.3          # ASGI server for Quart
