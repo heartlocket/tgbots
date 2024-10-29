@@ -1,6 +1,15 @@
 Here's the README file that guides you through the setup:
 
 markdown
+
+# Scraper
+
+- test the scraper with run_scraper.py
+- wallets.py will initialize scraper + dex api requests on the top 4 tokens held in the specified wallet
+- ~1 min response times
+- TODO: fine tune a model that has lightweight, structured lists of tokens, and assistant rating responses. This model will serve as a driver for fiji
+- possibly want to ship this as a web app with phantom integration
+
 # Telegram Bot with OpenAI and Quart
 
 This project is a Telegram bot that integrates with OpenAI's GPT models using the Quart web framework. It can be run locally and set up to receive webhooks using ngrok and its default configuration is for deployment in an Azure container. 
