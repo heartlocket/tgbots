@@ -5,6 +5,7 @@ from typing import Optional, Dict, List
 import time
 from textwrap import shorten
 from token_scraper import PumpTokenScraper
+from dexscraper import scrapeDex
 
 class TopTokenAnalyzer:
     def __init__(self, rpc_url: str = "https://api.mainnet-beta.solana.com", debug: bool = True):
@@ -121,20 +122,30 @@ class TopTokenAnalyzer:
         """Add descriptions to the top tokens"""
         if not tokens:
             return tokens
-            
-        # Initialize scraper only when needed
-        if not self.pump_scraper:
-            self.pump_scraper = PumpTokenScraper(use_headless=True, debug=self.debug)
         
         for token in tokens:
             try:
-                pump_info = self.pump_scraper.get_token_description(token['mint'])
-                token['description'] = pump_info['description'] if pump_info else "No description available"
+                dex_info = scrapeDex(token['mint'])
+                token['description'] = dex_info if dex_info else "No description available"
             except Exception as e:
                 self.debug_print(f"Error fetching description for {token['mint']}: {str(e)}")
                 token['description'] = "Error fetching description"
         
         return tokens
+
+    def get_token_data(self, wallet_address: str) -> List[Dict]:
+        """
+        Fetch and return the top token data for a given wallet address.
+        """
+        self.debug_print(f"Fetching top tokens for wallet: {wallet_address}")
+        top_tokens = self.get_top_token_balances(wallet_address)
+        if top_tokens:
+            enriched_tokens = self.enrich_with_descriptions(top_tokens)
+            self.debug_print(f"Enriched tokens: {enriched_tokens}")
+            return enriched_tokens
+        else:
+            self.debug_print("No tokens found or error fetching balances")
+            return []
 
     def print_token_balances(self, wallet_address: str):
         """Print top 4 token balances with descriptions"""
@@ -176,11 +187,10 @@ class TopTokenAnalyzer:
             print(f"Total Value of Top 4 Tokens: ${total_value_usd:,.2f}")
         else:
             print("No tokens found or error fetching balances")
-
+        
     def close(self):
         """Clean up resources"""
-        if self.pump_scraper:
-            self.pump_scraper.close()
+        pass
 
 def main():
     wallet_address = "BcNKrThT7nrywe1HSFVKS1tn5UuoNmCKsXhw9zqsfnny"
