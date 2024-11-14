@@ -58,16 +58,15 @@ This will start ngrok and expose your local port 8443 to the internet.
 
 You should see something like this :
 
-```bash
+````bash
 Web Interface                 http://127.0.0.1:4040
-Forwarding                    https://123-456-7890.ngrok.io ->
-```
+Forwarding                    https://123-456-7890.ngrok.io -> http://localhost:8443
 
 Copy the HTTPS URL (e.g., https://123-456-7890.ngrok.io) and update your .env file:
 
 ```bash
 WEBHOOK_URL=https://123-456-7890.ngrok.io
-```
+````
 
 _You will need to change the <WEBHOOK_URL> everytime you reload or close this terminal_
 
