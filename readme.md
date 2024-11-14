@@ -81,7 +81,9 @@ curl -F "url=$WEBHOOK_URL" https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWe
 
 Alternatively, you can visit the following URL in your browser:
 
-https://api.telegram.org/bot<Your-Bot-Token>/setWebhook?url=<Your-Webhook-URL>
+```bash
+"https://api.telegram.org/bot<Your-Bot-Token>/setWebhook?url=<Your-Webhook-URL>"
+```
 
 6. Run the Application
 
