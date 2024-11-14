@@ -3,22 +3,20 @@ import json
 import logging
 import os
 import sys
-from typing import List, Dict, Optional
+import re
+from typing import List, Dict
 from dotenv import load_dotenv
 from openai import OpenAI
-from wallets import TopTokenAnalyzer
+from token_scraper import TopTokenAnalyzer
 
 # -----------------------------
 # Configuration and Setup
 # -----------------------------
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 load_dotenv()
 
-
-## LOAD IN FIJI SYSTEM
 try:
     with open('fijiSystem.txt', 'r', encoding='utf-8') as file:
         fiji_system = file.read()
@@ -26,9 +24,6 @@ except Exception as e:
     logger.error(f"Error reading fijiSystem.txt: {e}")
     sys.exit(1)
 
-#print(fiji_system)
-
-# Configuration constants
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY_JF')
 if not OPENAI_API_KEY:
     raise ValueError("OpenAI API key not found in environment variables")
@@ -38,33 +33,11 @@ MODELS = {
     'final_rank': "ft:gpt-4o-2024-08-06:fdasho::A0fEtT3s"
 }
 
-
-# -----------------------------
-# OpenAI API Interaction
-# -----------------------------
 class OpenAIClient:
     def __init__(self):
         self.client = OpenAI(api_key=OPENAI_API_KEY)
 
-    async def generate_chat_completion(
-        self,
-        model: str,
-        prompt: str,
-        max_tokens: int = 150,
-        system_message: str = "You are a helpful assistant that analyzes cryptocurrency tokens."
-    ) -> Optional[str]:
-        """
-        Asynchronously call the OpenAI Chat API with the specified model and prompt.
-
-        Args:
-            model: The OpenAI model ID to use
-            prompt: The prompt string to send to the model
-            max_tokens: Maximum number of tokens to generate
-            system_message: System message to set the context
-
-        Returns:
-            The content of the AI's response or None if an error occurs
-        """
+    async def generate_chat_completion(self, model: str, prompt: str, max_tokens: int = 150, system_message: str = "You are a helpful assistant that analyzes cryptocurrency tokens.") -> str:
         try:
             response = await asyncio.to_thread(
                 self.client.chat.completions.create,
@@ -80,179 +53,133 @@ class OpenAIClient:
             )
             return response.choices[0].message.content.strip()
         except Exception as e:
-            logger.error(f"OpenAI API error: {str(e)}")
-            return None
-# TEST OPENAI
-async def test_generate_chat_completion():
-    model = MODELS['final_rank']  # Replace with your actual model ID
-    prompt = "Hey Fiji, what's up?"
-    max_tokens = 300
-    system_message = fiji_system
+            logger.error(f"OpenAI API error: {e}")
+            return f"Error in analysis: {str(e)}"
 
-    # Instantiate OpenAIClient within the function
-    openai_client = OpenAIClient()
-
-    # Call the generate_chat_completion method
-    response = await openai_client.generate_chat_completion(
-        model,
-        prompt,
-        max_tokens=max_tokens,
-        system_message=system_message
-    )
-    print("Response from OpenAI API:")
-    print(response)
-
-
-# -----------------------------
-# Token Data Handler
-# -----------------------------
-class TokenDataHandler:
-    @staticmethod
-    def format_token_data(tokens: List[Dict]) -> List[Dict]:
-        """
-        Format the token data into a structured list of dictionaries.
-
-        Args:
-            tokens: List of token dictionaries from TopTokenAnalyzer
-
-        Returns:
-            Formatted list of token dictionaries
-        """
-        required_fields = {
-            'name', 'symbol', 'balance', 'price_usd', 'value_usd',
-            'market_cap', 'volume_24h', 'price_change_24h', 'description'
-        }
-
-        return [{
-            field: token.get(field, None) for field in required_fields
-        } for token in tokens]
-
-    @staticmethod
-    def generate_ranking_prompt(tokens_data: List[Dict]) -> str:
-        """
-        Generate the initial ranking prompt.
-
-        Args:
-            tokens_data: Formatted token data
-
-        Returns:
-            Formatted prompt string
-        """
-        tokens_json = json.dumps(tokens_data, indent=2)
-        return (
-        "Given the following list of tokens, analyze each token individually "
-        "and provide scores for the metrics below. Do not rank them.\n\n"
-        f"Token data:\n{tokens_json}\n\n"
-        "For each token, provide scores on a scale of 1-10 in this exact format:\n\n"
-        "TOKEN: [Token Name] ([Symbol])\n"
-        "KEK (FUNNY): [Score/10]\n"
-        "AWW (CUTE): [Score/10]\n"
-        "RETARD (HIGH IQ): [Score/10]\n"
-        "REDDITOR (LOW IQ): [Score/10]\n"
-        "SWAG INDEX: [Score/10]\n"
-        "BRIEF COMMENT: [One-line analysis]\n"
-        "---\n\n"
-        "Please analyze each token separately using the format above.\n"
-        "Maintain consistent scoring across all tokens.\n"
-        "Be genuine and entertaining in your scoring."
-        )
-
-    @staticmethod
-    def generate_analysis_prompt(initial_ranking: str) -> str:
-        """
-        Generate the final analysis prompt.
-
-        Args:
-            initial_ranking: Result from initial ranking
-
-        Returns:
-            Formatted prompt string
-        """
-        return (
-            "Fiji, give us a Based or cringe ranking based on the initial rankings provided below, please provide a "
-            "detailed analysis of each token's potential for growth over the "
-            f"next 6 months.\n{initial_ranking}\n"
-            "Provide your analysis in the following format:\n"
-            "1. Token Name (Symbol): Detailed Analysis\n"
-            "2. ...\n3. ...\n4. ...\n"
-        )
-
-# -----------------------------
-# Main Wallet Ranker
-# -----------------------------
 class WalletRanker:
     def __init__(self):
         self.openai_client = OpenAIClient()
-        self.token_handler = TokenDataHandler()
 
-    async def analyze_wallet(self, wallet_address: str) -> None:
-        """
-        Analyze tokens in a wallet and provide detailed rankings and analysis.
-
-        Args:
-            wallet_address: The Solana wallet address to analyze
-        """
-        logger.info(f"Analyzing wallet: {wallet_address}")
-
-        # Retrieve and validate token data
-        analyzer = TopTokenAnalyzer(debug=False)
-        try:
-            tokens = analyzer.get_token_data(wallet_address)
-            if not tokens:
-                logger.warning("No token data found for the provided wallet address")
-                return
-        finally:
-            analyzer.close()
-
-        # Format token data
-        formatted_tokens = self.token_handler.format_token_data(tokens)
-        print("\n--- Token Data ---")
-        print(json.dumps(formatted_tokens, indent=2)) # Print formatted token data  
-
-        # Generate initial ranking with specific system message
-        initial_prompt = self.token_handler.generate_ranking_prompt(formatted_tokens)
-        initial_rank = await self.openai_client.generate_chat_completion(
-            MODELS['initial_rank'],
-            initial_prompt,
-            max_tokens=300,
-            system_message="You are an AI model trained to rank cryptocurrency tokens based on their fundamentals and market data."
+    def generate_ranking_prompt(self, tokens_data: List[Dict]) -> str:
+        tokens_json = json.dumps(tokens_data, indent=2)
+        return (
+            "Given the following list of tokens, analyze each token individually "
+            "and provide scores for the metrics below. Do not rank them.\n\n"
+            f"Token data:\n{tokens_json}\n\n"
+            "For each token, provide scores on a scale of 1-10 in this exact format:\n\n"
+            "TOKEN: [Token Name] ([Symbol])\n"
+            "KEK (FUNNY): [Score/10]\n"
+            "AWW (CUTE): [Score/10]\n"
+            "RETARD (HIGH IQ): [Score/10]\n"
+            "REDDITOR (LOW IQ): [Score/10]\n"
+            "SWAG INDEX: [Score/10]\n"
+            "BRIEF COMMENT: [One-line analysis]\n"
+            "---\n\n"
+            "Please analyze each token separately using the format above.\n"
+            "Maintain consistent scoring across all tokens.\n"
+            "Be genuine and entertaining in your scoring."
         )
 
-        if initial_rank:
-            print("\n--- Initial Rankings ---")
-            print(initial_rank)
+    def format_analysis(self, analysis: str, tokens: List[Dict]) -> str:
+        """
+        Add Telegram-specific formatting with emojis, metrics, and links
+        Using Telegram's HTML formatting for better copy-paste support
+        """
+        try:
+            token_blocks = re.split(r'---', analysis.strip())
+            formatted_blocks = []
+            
+            for block, token_data in zip(token_blocks, tokens):
+                if not block.strip():
+                    continue
+                
+                lines = block.strip().split('\n')
+                token_header = lines[0].strip()
+                mint_address = token_data['mint']
+                dexscreener_url = f"https://dexscreener.com/solana/{mint_address}"
+                
+                # Using HTML formatting for better copy support
+                formatted_block = (
+                    f"🌟 <b>{token_header}</b>\n\n"
+                    f"📋 <code>{mint_address}</code>\n"
+                    f"🔍 <a href='{dexscreener_url}'>View on DexScreener</a>\n\n"
+                    f"💰 Value: ${float(token_data['value_usd']):,.2f}\n"
+                    f"📊 Price: ${float(token_data['price_usd']):,.6f}\n"
+                    f"📈 24h Change: {token_data['price_change_24h']}%\n"
+                    f"💎 Market Cap: ${float(token_data['market_cap']):,.2f}\n"
+                    f"💫 Balance: {token_data['balance']:.4f}\n\n"
+                    f"<b>Analysis:</b>\n"
+                )
+                
+                # Add AI analysis with emojis
+                for line in lines[1:]:
+                    formatted_line = line.strip()
+                    if 'KEK' in formatted_line:
+                        formatted_block += f"😂 {formatted_line}\n"
+                    elif 'AWW' in formatted_line:
+                        formatted_block += f"🐶 {formatted_line}\n"
+                    elif 'RETARD' in formatted_line:
+                        formatted_block += f"🧠 {formatted_line}\n"
+                    elif 'REDDITOR' in formatted_line:
+                        formatted_block += f"🤡 {formatted_line}\n"
+                    elif 'SWAG INDEX' in formatted_line:
+                        formatted_block += f"🚀 {formatted_line}\n"
+                    elif 'BRIEF COMMENT' in formatted_line:
+                        formatted_block += f"💬 {formatted_line}\n"
+                    else:
+                        formatted_block += f"{formatted_line}\n"
+                
+                formatted_blocks.append(formatted_block)
 
-            # Generate final analysis with specific system message
-            #final_prompt = self.token_handler.generate_analysis_prompt(initial_rank)
-            final_prompt = f"Fiji, based on the data provided from {initial_rank}, please summarize what you believe this persons wallet ranking is based from based to cringe.. and give a total score, 0 being cringe 10 being based for the entire wallet."
-            final_analysis = await self.openai_client.generate_chat_completion(
-                MODELS['final_rank'],
-                final_prompt,
-                max_tokens=600,
-                system_message=fiji_system
+            total_value = sum(float(t['value_usd']) for t in tokens)
+            final_summary = f"\n🏦 <b>Total Portfolio Value:</b> ${total_value:,.2f}"
+            
+            # Add divider between tokens
+            divider = "\n" + "═" * 35 + "\n"
+            
+            return divider.join(formatted_blocks) + final_summary
+
+        except Exception as e:
+            logger.error(f"Error formatting analysis: {e}")
+            return analysis  # Fallback to raw analysis if formatting fails
+
+    async def analyze_wallet(self, wallet_address: str) -> str:
+        logger.info(f"Analyzing wallet: {wallet_address}")
+        analyzer = TopTokenAnalyzer(debug=False)
+        try:
+            tokens = await analyzer.get_token_data(wallet_address)
+            if not tokens:
+                return "No token data found for the provided wallet address"
+
+            prompt = self.generate_ranking_prompt(tokens)
+            initial_rank = await self.openai_client.generate_chat_completion(
+                MODELS['initial_rank'],
+                prompt,
+                max_tokens=1000,
+                system_message="You are an AI model trained to rank cryptocurrency tokens based on their fundamentals and market data."
             )
 
-            if final_analysis:
-                print("\n--- Final Analysis ---")
-                print(final_analysis)
-            else:
-                logger.error("Failed to generate final analysis")
-        else:
-            logger.error("Failed to generate initial ranking")
+            logger.info("Analysis complete")
+            return self.format_analysis(initial_rank, tokens)
 
-# -----------------------------
-# Entry Point
-# -----------------------------
+        except Exception as e:
+            logger.error(f"Error in analyze_wallet: {e}")
+            return f"Error analyzing wallet: {str(e)}"
+
+        finally:
+            await analyzer.close()  # Ensure proper resource cleanup
+
+
 async def main():
-    """Entry point for the wallet_ranker script."""
     if len(sys.argv) != 2:
         print("Usage: python wallet_ranker.py <SOLANA_WALLET_ADDRESS>")
         sys.exit(1)
 
     wallet_address = sys.argv[1]
     ranker = WalletRanker()
-    await ranker.analyze_wallet(wallet_address)
+    result = await ranker.analyze_wallet(wallet_address)
+    print("\nAnalysis Result:")
+    print(result)
 
 if __name__ == "__main__":
-    #asyncio.run(test_generate_chat_completion())
     asyncio.run(main())
