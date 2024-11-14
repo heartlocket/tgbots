@@ -31,7 +31,6 @@ pip install -r requirements.txt
    Create a .env file in the project root directory and add the following:
 
 ```bash
-.env
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 OPENAI_API_KEY=your-openai-api-key
 WEBHOOK_URL=https://your-ngrok-url/webhook
