@@ -19,19 +19,24 @@ This project is a Telegram bot that integrates with OpenAI's GPT models using th
 ```bash
 git clone https://github.com/yourusername/yourrepository.git
 cd yourrepository
+```
 
 2. Install Dependencies
-   bash
-   pip install -r requirements.txt
+
+```bash
+pip install -r requirements.txt
+```
 
 3. Set Up Environment Variables
    Create a .env file in the project root directory and add the following:
 
-env
+```bash
+.env
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 OPENAI_API_KEY=your-openai-api-key
 WEBHOOK_URL=https://your-ngrok-url/webhook
 FINANCE_MODEL=ft:gpt-4o-2024-08-06:fdasho:sansbuttrater:AO9876Y1
+```
 
 Replace your-telegram-bot-token with your actual Telegram bot token.
 Replace your-openai-api-key with your OpenAI API key.
@@ -46,34 +51,44 @@ Download ngrok from the official website and follow the installation instruction
 
 Start ngrok
 
+```bash
 ngrok http 8443
+```
+
 This will start ngrok and expose your local port 8443 to the internet.
 
-
+```bash
 perl
-Forwarding                    https://1234567890.ngrok.io -> http://localhost:8000
+Forwarding https://1234567890.ngrok.io -> http://localhost:8000
 Copy the HTTPS URL (e.g., https://1234567890.ngrok.io) and update your .env file:
 
 env
 WEBHOOK_URL=https://1234567890.ngrok.io/webhook
+```
 
 YOU WILL NEED TO RESET THE WEBHOOK_URL EVERYTIME YOU CLOSE THE TERMINAL.
 
 5. Set the Telegram Webhook
-You need to tell Telegram where to send updates.
+   You need to tell Telegram where to send updates.
 
+```bash
 curl -F "url=$WEBHOOK_URL" https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook
+```
+
 Alternatively, you can visit the following URL in your browser:
 
 https://api.telegram.org/bot<Your-Bot-Token>/setWebhook?url=<Your-Webhook-URL>
+
 6. Run the Application
 
-python local.py
+```bash
+python main.py
+```
+
 You should see logs indicating that the application has started.
 
 7. Test the Bot
-Send a message to your Telegram bot and see if it responds.
-```
+   Send a message to your Telegram bot and see if it responds.
 
 # Scraper
 
@@ -96,12 +111,12 @@ pyhton token_scraper.py = <your address>
 
 - Lastly if you just want to see how the scraper works for DexScreener you can run an array of Solana Addresses through scraper_utils.py which handles the multiprocessing threading that allows for concurrent data analysis within the Telegram Bot.
 
-```bash
- python test_tokens = [
+```python
+ test_tokens = [
         "Example 1",  # Case 1: Token with main description
         "Example 2",  # Case 2: Token with 'fallback description'
         "<Solana Token>"
-    ]
+]
 ```
 
 ## System Prompts and Fine-Tuning Models :
@@ -110,8 +125,8 @@ pyhton token_scraper.py = <your address>
 2. Change the mainSystem.txt to whatever system prompt you are using for your AI models.
 3. Within Main.py there are options to set the Agent name and the Model you are using.
 
-```bash
-python agent_name = "Agent" # Change this to your AI agents name
+```python
+agent_name = "Agent" # Change this to your AI agents name
 ai_model = "gpt-4" ## Change this to your Fine Tuned Model if you have one
 ```
 
