@@ -56,18 +56,20 @@ ngrok http 8443
 
 This will start ngrok and expose your local port 8443 to the internet.
 
-```bash
-perl
-Forwarding https://1234567890.ngrok.io -> http://localhost:8000
-```
-
-Copy the HTTPS URL (e.g., https://1234567890.ngrok.io) and update your .env file:
+You should see something like this :
 
 ```bash
-WEBHOOK_URL=https://1234567890.ngrok.io/webhook
+Web Interface                 http://127.0.0.1:4040
+Forwarding                    https://123-456-7890.ngrok.io ->
 ```
 
-_You will need to change the <WEBHOOK_URL> everytime you reload_
+Copy the HTTPS URL (e.g., https://123-456-7890.ngrok.io) and update your .env file:
+
+```bash
+WEBHOOK_URL=https://123-456-7890.ngrok.io
+```
+
+_You will need to change the <WEBHOOK_URL> everytime you reload or close this terminal_
 
 5. (Optional) Set the Telegram Webhook
 
@@ -125,7 +127,7 @@ pyhton token_scraper.py = <your address>
 
 1. Included is an example of a Fine Tuning JSONL file for you to use to fine tune your own Financial Model.
 2. Change the mainSystem.txt to whatever system prompt you are using for your AI models.
-3. Within Main.py there are options to set the Agent name and the Model you are using.
+3. Within main.py there are options to set the Agent name and the Model you are using.
 
 ```python
 agent_name = "Agent" # Change this to your AI agents name
