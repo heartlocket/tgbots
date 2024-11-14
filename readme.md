@@ -37,18 +37,18 @@ WEBHOOK_URL=https://your-ngrok-url/webhook
 FINANCE_MODEL=ft:gpt-4o-2024-08-06:fdasho:sansbuttrater:AO9876Y1
 ```
 
-Replace your-telegram-bot-token with your actual Telegram bot token.
-Replace your-openai-api-key with your OpenAI API key.
-FINANCE_MODEL replace with your own fine tuned model using the JSONL given as an example.
-The WEBHOOK_URL will be set after starting ngrok.
+- Replace your-telegram-bot-token with your actual Telegram bot token.
+- Replace your-openai-api-key with your OpenAI API key.
+- FINANCE_MODEL replace with your own fine tuned model using the JSONL given as an example.
+- The WEBHOOK_URL will be set after starting ngrok.
 
-4. Start ngrok
-   ngrok allows you to expose a local server to the internet.
+### 4. Start ngrok
 
-Install ngrok
-Download ngrok from the official website and follow the installation instructions.
+Ngrok allows you to expose a local server to the internet.
 
-Start ngrok
+Go to the ngrok website and make an account, and from the official website follow the installation instructions.
+
+Then start grok locally.
 
 ```bash
 ngrok http 8443
@@ -59,16 +59,19 @@ This will start ngrok and expose your local port 8443 to the internet.
 ```bash
 perl
 Forwarding https://1234567890.ngrok.io -> http://localhost:8000
+```
+
 Copy the HTTPS URL (e.g., https://1234567890.ngrok.io) and update your .env file:
 
-env
+```bash
 WEBHOOK_URL=https://1234567890.ngrok.io/webhook
 ```
 
-YOU WILL NEED TO RESET THE WEBHOOK_URL EVERYTIME YOU CLOSE THE TERMINAL.
+_You will need to change the <WEBHOOK_URL> everytime you reload_
 
-5. Set the Telegram Webhook
-   You need to tell Telegram where to send updates.
+5. (Optional) Set the Telegram Webhook
+
+   You can tell Telegram where to send updates directly.
 
 ```bash
 curl -F "url=$WEBHOOK_URL" https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/setWebhook
