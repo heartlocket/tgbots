@@ -34,7 +34,7 @@ pip install -r requirements.txt
 TELEGRAM_BOT_TOKEN=your-telegram-bot-token
 OPENAI_API_KEY=your-openai-api-key
 WEBHOOK_URL=https://your-ngrok-url/webhook
-FINANCE_MODEL=ft:gpt-4o-2024-08-06:fdasho:sansbuttrater:AO9876Y1
+FINANCE_MODEL=your-finance-model
 ```
 
 - Replace your-telegram-bot-token with your actual Telegram bot token.
