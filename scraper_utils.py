@@ -120,8 +120,8 @@ def run_scrapers(tokens):
 def main():
     # Define 4 test tokens representing different cases
     test_tokens = [
-        "6PbjXML6yTzjJD1ex7sGrXGbDAxTzRQsh9xEcVKQpump",  # Case 1: Token with main description
-        "Do3aZ2zeTYFVZg2d473PvkEvw6QtmYc3gUUugoQQEMbo",  # Case 2: Token with 'community takeover' and additional description
+        "A9e6JzPQstmz94pMnzxgyV14QUqoULSXuf5FPsq8UiRa",  # Case 1: Token with main description
+        "Dp3EydLyxydf69ACzXtJb9tcq67235d4vEnLB8dRpump",  # Case 2: Token with 'fall back' description
     ]
 
     # Run scrapers on test tokens

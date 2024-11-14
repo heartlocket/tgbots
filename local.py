@@ -67,8 +67,8 @@ config.accesslog = "-"
 load_dotenv()
 
 START_TIME = datetime.now()
-TELEGRAM_BOT_TOKEN = os.getenv('TEST_TELEGRAM')
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY_JF')
+TELEGRAM_BOT_TOKEN = os.getenv('LOCAL_TELEGRAM')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 WEBHOOK_URL = os.getenv('WEBHOOK_LOCAL').rstrip('/') if os.getenv('WEBHOOK_LOCAL') else None
 logger.info(f"WEBHOOK_URL is set to: {WEBHOOK_URL}")
 

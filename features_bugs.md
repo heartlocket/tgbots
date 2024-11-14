@@ -1,10 +1,10 @@
 # bugs
 
-Bot includes ' username: ' in reply
+Ants and Stuff
 
-Telegram features lag 
+# Quant Feature Upgrade
 
-# sequential message lag
+Work on Giving Quant Feature Upgrade to Be more Systemized.
+Store descriptions scraped to a DB to save on scraping time.
 
-Multiplied 
-
+# Local Front

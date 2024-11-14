@@ -17,21 +17,25 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 
+## CHANGE THIS PART LATER TO MORE SECURELY STORE THE SYSTEM PROMPT & OPEN SOURCE
+
 try:
-    with open('fijiSystem.txt', 'r', encoding='utf-8') as file:
+    with open('mainSystem.txt', 'r', encoding='utf-8') as file:
         fiji_system = file.read()
 except Exception as e:
-    logger.error(f"Error reading fijiSystem.txt: {e}")
+    logger.error(f"Error reading mainSystem.txt: {e}")
     sys.exit(1)
 
-OPENAI_API_KEY = os.getenv('OPENAI_API_KEY_JF')
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 if not OPENAI_API_KEY:
     raise ValueError("OpenAI API key not found in environment variables")
 
+FINANCE_MODEL = os.getenv('FINANCE_MODEL')
+
 MODELS = {
-    'initial_rank': "ft:gpt-4o-2024-08-06:fdasho:sansbuttrater:AO9876Y1",
-    'final_rank': "ft:gpt-4o-2024-08-06:fdasho::A0fEtT3s"
+    'FINANCE_MODEL': FINANCE_MODEL
 }
+
 
 class OpenAIClient:
     def __init__(self):
@@ -152,15 +156,15 @@ class WalletRanker:
                 return "No token data found for the provided wallet address"
 
             prompt = self.generate_ranking_prompt(tokens)
-            initial_rank = await self.openai_client.generate_chat_completion(
-                MODELS['initial_rank'],
+            FINANCE_MODEL = await self.openai_client.generate_chat_completion(
+                MODELS['FINANCE_MODEL'],
                 prompt,
                 max_tokens=1000,
                 system_message="You are an AI model trained to rank cryptocurrency tokens based on their fundamentals and market data."
             )
 
             logger.info("Analysis complete")
-            return self.format_analysis(initial_rank, tokens)
+            return self.format_analysis(FINANCE_MODEL, tokens)
 
         except Exception as e:
             logger.error(f"Error in analyze_wallet: {e}")

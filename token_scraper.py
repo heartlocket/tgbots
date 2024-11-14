@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from solana.rpc.api import Client
 import aiohttp
 from typing import Optional, Dict, List
@@ -172,7 +173,10 @@ class TopTokenAnalyzer:
 
 # Entry point
 async def main():
-    wallet_address = "BcNKrThT7nrywe1HSFVKS1tn5UuoNmCKsXhw9zqsfnny"
+    if len(sys.argv) != 2:
+        print("Usage: python wallet_ranker.py <SOLANA_WALLET_ADDRESS>")
+        sys.exit(1)
+    wallet_address = sys.argv[1] # Wallet address to analyze  
     analyzer = TopTokenAnalyzer(debug=True)
     try:
         await analyzer.print_token_balances(wallet_address)
