@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 START_TIME = datetime.now()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-WEBHOOK_URL = os.getenv('WEBHOOK_LOCAL').rstrip('/') if os.getenv('WEBHOOK_LOCAL') else None
+WEBHOOK_URL = os.getenv('WEBHOOK_URL', 'http://localhost:8000')
 logger.info(f"WEBHOOK_URL is set to: {WEBHOOK_URL}")
 
 
