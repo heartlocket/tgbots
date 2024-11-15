@@ -33,7 +33,7 @@ if not OPENAI_API_KEY:
 FINANCE_MODEL = os.getenv('FINANCE_MODEL')
 
 MODELS = {
-    'FINANCE_MODEL': FINANCE_MODEL
+    'FINANCE_MODEL': "ft:gpt-4o-2024-08-06:fdasho:sansbuttrater:AO9876Y1"
 }
 
 

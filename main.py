@@ -32,16 +32,6 @@ from wallet_ranker import WalletRanker
 wallet_ranker = WalletRanker()
 quant_semaphores = defaultdict(lambda: Semaphore(1))
 
-# Configure logging
-LOG_LEVEL = os.getenv('LOG_LEVEL', 'DEBUG').upper()
-logging.basicConfig(
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    level=getattr(logging, LOG_LEVEL, logging.DEBUG),
-    handlers=[logging.StreamHandler(sys.stdout)]
-)
-
-logger = logging.getLogger(__name__)
-
 # Initialize Quart app
 app = Quart(__name__)
 app.config["DEBUG"] = True
@@ -59,10 +49,10 @@ def register_background_task(task: asyncio.Task) -> None:
 
 # Create Hypercorn config
 config = Config()
-config.bind = ["0.0.0.0:8443"]
+config.bind = [f"0.0.0.0:{os.getenv('PORT', '8000')}"]  # Change 8443 to 8000
 config.worker_class = "asyncio"
 config.keep_alive_timeout = 75
-config.use_reloader = True
+config.use_reloader = False  # Set to False in production
 config.accesslog = "-"
 
 # Load environment variables
@@ -71,8 +61,23 @@ load_dotenv(override=True)
 START_TIME = datetime.now()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL').rstrip('/') if os.getenv('WEBHOOK_LOCAL') else None
+
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Add these debug lines at the start of your main.py
+logger.info(f"Starting bot...")
+logger.info(f"WEBHOOK_URL: {os.getenv('WEBHOOK_URL')}")
+logger.info(f"Bot Token available: {'yes' if os.getenv('TELEGRAM_BOT_TOKEN') else 'no'}")
+logger.info(f"OpenAI Key available: {'yes' if os.getenv('OPENAI_API_KEY') else 'no'}")
+
+# Load environment variables
+
+WEBHOOK_URL = os.getenv('WEBHOOK_URL').rstrip('/') if os.getenv('WEBHOOK_URL') else None
 logger.info(f"WEBHOOK_URL is set to: {WEBHOOK_URL}")
+
+
 
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
     logger.error("Missing environment variables.")
