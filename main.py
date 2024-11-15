@@ -1,10 +1,3 @@
-print("=" * 50)
-print("STARTING FIJI BOT")
-print(f"PORT: {os.getenv('PORT', '8000')}")
-print(f"WEBHOOK_URL: {os.getenv('WEBHOOK_URL')}")
-print("=" * 50)
-sys.stdout.flush()  # Force print to show in logs
-
 import sys
 import logging
 import os
@@ -40,6 +33,13 @@ from wallet_ranker import WalletRanker
 # Initialize WalletRanker and semaphores
 wallet_ranker = WalletRanker()
 quant_semaphores = defaultdict(lambda: Semaphore(1))
+
+print("=" * 50)
+print("STARTING FIJI BOT")
+print(f"PORT: {os.getenv('PORT', '8000')}")
+print(f"WEBHOOK_URL: {os.getenv('WEBHOOK_URL')}")
+print("=" * 50)
+sys.stdout.flush()  # Force print to show in logs
 
 
 
