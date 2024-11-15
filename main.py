@@ -47,6 +47,9 @@ def register_background_task(task: asyncio.Task) -> None:
     task.add_done_callback(background_tasks.discard)
 
 
+# Load environment variables
+load_dotenv(override=True)
+
 # Create Hypercorn config
 config = Config()
 config.bind = [f"0.0.0.0:{os.getenv('PORT', '8000')}"]  # Change 8443 to 8000
@@ -55,8 +58,6 @@ config.keep_alive_timeout = 75
 config.use_reloader = False  # Set to False in production
 config.accesslog = "-"
 
-# Load environment variables
-load_dotenv(override=True)
 
 START_TIME = datetime.now()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
