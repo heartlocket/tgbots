@@ -16,3 +16,5 @@ selenium             # Required for web scraping
 seleniumbase  # Required for web scraping
 aiohttp       # Required for async web requests
 
+
+requests==2.31.0  # Often needed for API calls
