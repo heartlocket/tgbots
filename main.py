@@ -1,3 +1,10 @@
+print("=" * 50)
+print("STARTING FIJI BOT")
+print(f"PORT: {os.getenv('PORT', '8000')}")
+print(f"WEBHOOK_URL: {os.getenv('WEBHOOK_URL')}")
+print("=" * 50)
+sys.stdout.flush()  # Force print to show in logs
+
 import sys
 import logging
 import os
@@ -79,8 +86,12 @@ logger.info(f"OpenAI Key available: {'yes' if os.getenv('OPENAI_API_KEY') else '
 
 # Load environment variables
 
-WEBHOOK_URL = os.getenv('WEBHOOK_URL').rstrip('/') if os.getenv('WEBHOOK_URL') else None
-logger.info(f"WEBHOOK_URL is set to: {WEBHOOK_URL}")
+webhook_url = os.getenv('WEBHOOK_URL')
+if not webhook_url:
+    print("WARNING: WEBHOOK_URL not found in environment variables")
+    webhook_url = 'https://fiji-deploy.azurewebsites.net'
+WEBHOOK_URL = webhook_url.rstrip('/')
+print(f"Using webhook URL: {WEBHOOK_URL}")
 
 
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
