@@ -6,9 +6,6 @@ venv/
 venv/
 *.pyc
 ``
-local_fiji.py
 prompt1.txt
 claudeSystem.txt
 Claude.py
-fijiSystem.txt
-local.py

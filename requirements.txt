@@ -12,7 +12,7 @@ blinker==1.5               # Required by Quart for signals
 
 # Async runtime dependencies
 aiofiles==24.1.0           # Required for async file operations
-selenium==4.26.1           # Required for web scraping
-seleniumbase==4.32.5       # Required for web scraping
-aiohttp==3.11.0            # Required for async web requests
+selenium             # Required for web scraping
+seleniumbase  # Required for web scraping
+aiohttp       # Required for async web requests
 

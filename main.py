@@ -1,9 +1,3 @@
-# THE WORLD IS YOURS SCARFACE
-
-# -----------------------------
-
-
-
 import sys
 import logging
 import os
@@ -28,6 +22,8 @@ from telegram.ext import (
 )
 import openai
 from openai import OpenAI
+
+
 
 # Import WalletRanker
 from wallet_ranker import WalletRanker
@@ -71,16 +67,11 @@ config.accesslog = "-"
 
 # Load environment variables
 load_dotenv(override=True)
-load_dotenv()
 
 START_TIME = datetime.now()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
-WEBHOOK_URL = os.getenv('WEBHOOK_URL').rstrip('/') if os.getenv('WEBHOOK_URL') else None
-
-print(TELEGRAM_BOT_TOKEN)
-
-
+WEBHOOK_URL = os.getenv('WEBHOOK_URL').rstrip('/') if os.getenv('WEBHOOK_LOCAL') else None
 logger.info(f"WEBHOOK_URL is set to: {WEBHOOK_URL}")
 
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
@@ -92,17 +83,17 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 application = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).updater(None).build()
 MAX_MESSAGES = 25
 
+ai_model = "ft:gpt-4o-2024-08-06:fdasho::A0fEtT3s"
+
 # Load system prompt
 try:
-    with open('mainSystem.txt', 'r', encoding='utf-8') as file:
-        main_system = file.read()
+    with open('fijiSystem.txt', 'r', encoding='utf-8') as file:
+        fiji_system = file.read()
 except Exception as e:
-    logger.error(f"Error reading mainSystem.txt: {e}")
+    logger.error(f"Error reading fijiSystem.txt: {e}")
     sys.exit(1)
 
-main_prompt = main_system
-agent_name = "Agent" # Change this to your AI agents name
-ai_model = "gpt-4" ## Change this to your Fine Tuned Model if you have one
+main_prompt = fiji_system
 
 # Store messages per chat
 messages_by_chat_id = defaultdict(lambda: deque(maxlen=MAX_MESSAGES))
@@ -137,12 +128,12 @@ async def chat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_messages = messages_by_chat_id[chat_id]
     chat_messages.append({'role': 'user', 'content': f"{update.message.from_user.full_name}: {user_message_text}"})
     
-    if re.search(fr'({agent_name}|bot_name)', user_message_text, re.IGNORECASE):
+    if re.search(r'(fiji|bot_name)', user_message_text, re.IGNORECASE):
         logger.debug("Trigger word detected, calling OpenAI...")
         ai_response = await call_openai_api(ai_model, list(chat_messages))
-        cleaned_response = ai_response.replace(f'{agent_name}: ', '')
+        cleaned_response = ai_response.replace('FIJI: ', '')
         await context.bot.send_message(chat_id=chat_id, text=cleaned_response)
-        chat_messages.append({'role': 'assistant', 'content': f"{agent_name}: {cleaned_response}"})
+        chat_messages.append({'role': 'assistant', 'content': f"FIJI: {cleaned_response}"})
 
 async def quant_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.message.chat_id
@@ -179,6 +170,7 @@ async def quant_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await update.message.reply_text(f"Error analyzing wallet: {str(e)}")
     else:
         await update.message.reply_text("A wallet analysis is already in progress in this chat. Please wait.")
+
 
 
 
