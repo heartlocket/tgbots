@@ -26,6 +26,7 @@ from openai import OpenAI
 # Load environment variables
 load_dotenv(override=True)
 
+print("IM IN AZURE... BOT")
 # Import WalletRanker
 from wallet_ranker import WalletRanker
 
@@ -33,7 +34,7 @@ from wallet_ranker import WalletRanker
 wallet_ranker = WalletRanker()
 quant_semaphores = defaultdict(lambda: Semaphore(1))
 
-print("IM IN AZURE... BOT")
+
 
 # Initialize Quart app
 app = Quart(__name__)
