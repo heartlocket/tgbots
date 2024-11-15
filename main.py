@@ -24,7 +24,7 @@ import openai
 from openai import OpenAI
 
 # Load environment variables
-load_dotenv(override=True)
+load_dotenv()
 
 print("IM IN AZURE... BOT")
 # Import WalletRanker
@@ -33,15 +33,6 @@ from wallet_ranker import WalletRanker
 # Initialize WalletRanker and semaphores
 wallet_ranker = WalletRanker()
 quant_semaphores = defaultdict(lambda: Semaphore(1))
-
-print("=" * 50)
-print("STARTING FIJI BOT")
-print(f"PORT: {os.getenv('PORT', '8000')}")
-print(f"WEBHOOK_URL: {os.getenv('WEBHOOK_URL')}")
-print("=" * 50)
-sys.stdout.flush()  # Force print to show in logs
-
-
 
 # Initialize Quart app
 app = Quart(__name__)
@@ -66,32 +57,22 @@ config.keep_alive_timeout = 75
 config.use_reloader = False  # Set to False in production
 config.accesslog = "-"
 
-print(f"PORT: {os.getenv('PORT', '8000')}")
-print("Starting server on port 8000...")
-sys.stdout.flush()  # Force the print to show up in logs
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 START_TIME = datetime.now()
 TELEGRAM_BOT_TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+WEBHOOK_URL = os.getenv('WEBHOOK_LOCAL').rstrip('/') if os.getenv('WEBHOOK_LOCAL') else None
+logger.info(f"WEBHOOK_URL is set to: {WEBHOOK_URL}")
 
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 # Add these debug lines at the start of your main.py
 logger.info(f"Starting bot...")
 logger.info(f"WEBHOOK_URL: {os.getenv('WEBHOOK_URL')}")
 logger.info(f"Bot Token available: {'yes' if os.getenv('TELEGRAM_BOT_TOKEN') else 'no'}")
 logger.info(f"OpenAI Key available: {'yes' if os.getenv('OPENAI_API_KEY') else 'no'}")
-
-# Load environment variables
-
-webhook_url = os.getenv('WEBHOOK_URL')
-if not webhook_url:
-    print("WARNING: WEBHOOK_URL not found in environment variables")
-    webhook_url = 'https://fiji-deploy.azurewebsites.net'
-WEBHOOK_URL = webhook_url.rstrip('/')
-print(f"Using webhook URL: {WEBHOOK_URL}")
 
 
 if not TELEGRAM_BOT_TOKEN or not OPENAI_API_KEY or not WEBHOOK_URL:
